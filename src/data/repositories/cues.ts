@@ -4,7 +4,7 @@ import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
 // import StageToken, { StageTokenType } from "../../domain/entities/StageToken";
 // import { ICueCommandBundle } from "../../domain/abstractions/ICueCommandBundle";
-import ICues from "../../domain/abstractions/i-cues";
+import { IOscData } from "../../domain/abstractions/i-cues";
 import OscBundle from "../transfer-objects/osc-bundle";
 import { autoInjectable, inject } from "tsyringe";
 
@@ -21,8 +21,8 @@ export default class Cues {
     private parentChildIdMap: Record<string, string[]>  = {};
 
     constructor(
-        @inject('Cues')
-        private cueData: ICues
+        @inject('OscData')
+        private oscData: IOscData
     ) {}
 
     get(cueNumber: number, parentNumber?: number): Cue {
@@ -78,15 +78,15 @@ export default class Cues {
     }
 
     async set(...cues: Cue[]) {
-        if (!this.cueData.initialized) {
-            await this.cueData.initialize()
+        if (!this.oscData.initialized) {
+            await this.oscData.initialize()
         }
 
         const phaseValues = Object.values(Phase) as string[]
         phaseValues.forEach(async phase => {
             const bundles = cues.map(cue => new OscBundle(phase).addFromCue(cue))
             if (bundles.length) {
-                const mapping = await this.cueData.send(...bundles)
+                const mapping = await this.oscData.send(...bundles)
                 Object.assign(this.mappingByCueNumber, mapping)
             }
         })

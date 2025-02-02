@@ -1,16 +1,20 @@
-export interface ICueData {
-    initialized: boolean
+export interface IOscData {
+  initialized: boolean
 
-    initialize(): Promise<void>
-    send(...bundles: ICueCommandBundle[]): Promise<string[]>
+  initialize(): Promise<void>
+  send(...bundles: ICueCommandBundle[]): Promise<string[]>
 }
 
 export interface ICue {
-  color: string
+  number: string,
+  name: string,
+  type: string,
+  color: string,
+  id?: string,
 }
 
 export interface ICueCommandBundle {
-    mappingByCueNumber: Record<number, string> 
-    addFromCue(cue: ICue): this
+  mappingByCueNumber: Record<number, string>
+  addFromCue(cue: ICue): this
 }
 

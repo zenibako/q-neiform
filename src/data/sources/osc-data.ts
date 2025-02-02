@@ -1,11 +1,11 @@
 import OscPacket from "../transfer-objects/osc-packet"
 import OscBundle from "../transfer-objects/osc-bundle";
 import OscUdpPort from "../transfer-objects/osc-udp-port";
-import { ICueData } from "../../domain/abstractions/i-cues";
+import { IOscData } from "../../domain/abstractions/i-cues";
 
 const CONNECT_PHASE = 'connect'
 
-export default class OscData implements ICueData {
+export default class OscData implements IOscData {
     queue: OscBundle[] = []
     mappingByCueNumber: Record<number, string> = {}
     initialized = false

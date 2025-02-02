@@ -49,6 +49,7 @@ declare namespace Beat {
     ranges: { bold: Range[]; underline: Range[]; italic: Range[]; notes: Range[] } // Specific in-line ranges
   }
 
+  function log(message: string)
   function lines(): Line[]
   function outline(): Scene[]
   function scenes(): Scene[]
@@ -71,4 +72,26 @@ declare namespace Beat {
   // Highlighting Text
   function textBackgroundHighlight(hexColor: string, location: number, length: number) // set text background color
   function textHighlight(hexColor: string, location: number, length: number) // set foreground color
+
+  // Menu
+  type Menu = {
+    addItem(menuItem: MenuItem) // adds a menu item
+    removeItem(menuItem: MenuItem) // removes a menu item
+  }
+  type MenuItem = {
+    on: boolean
+  }
+  function menuItem(title: string, keyboardShortcuts: string[], callback: () => void): MenuItem
+  function separatorMenuItem(): MenuItem
+  function menu(title: string, items: MenuItem[]): Menu
+  
+  // Listeners
+  function onTextChange(callback: (location: number, length: number) => void)
+  function onOutlineChange(callback: (outline: Scene[]) => void)
+  function onSelectionChange(callback: (location: number, length: number) => void)
+  function onSceneIndexUpdate(callback: (sceneIndex: number) => void)
+  let onTextChangeDisabled: boolean
+  let onOutlineChangeDisabled: boolean
+  let onSelectionChangeDisabled: boolean
+  let onSceneIndexChangeDisabled: boolean
 }

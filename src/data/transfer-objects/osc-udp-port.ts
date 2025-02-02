@@ -1,10 +1,10 @@
 import osc from "osc"
-import OscBundle from "./OscBundle"
-import { getMapping } from "../../common/qlabHelper"; // TODO: Make less specific to QLab
-import OscPacket from "./OscPacket";
+import OscBundle from "./osc-bundle"
+import { getMapping } from "../../common/qlab-helper"; // TODO: Make less specific to QLab
+import OscPacket from "./osc-packet";
 
 export default class OscUdpPort {
-    target: any
+    target: object
     isProcessing = false
     newCueIds: string[] = []
     replyCount = 0

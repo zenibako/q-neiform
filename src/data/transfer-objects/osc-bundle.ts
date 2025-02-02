@@ -1,5 +1,4 @@
-import { ICueCommandBundle } from "../../domain/abstractions/i-cues"
-import Cue from "../../domain/entities/cue"
+import { ICue, ICueCommandBundle } from "../../domain/abstractions/i-cues"
 import OscPacket from "./../transfer-objects/osc-packet"
 
 export default class OscBundle implements ICueCommandBundle {
@@ -26,7 +25,7 @@ export default class OscBundle implements ICueCommandBundle {
         return this.addPackets(...packetsWithArgs)
     }
 
-    addFromCue(cue: Cue) {
+    addFromCue(cue: ICue) {
         const { isNewCue, type, cueAddress, number, name, mode, fileTarget, color } = cue
         if (isNewCue) {
             this.addPackets(
