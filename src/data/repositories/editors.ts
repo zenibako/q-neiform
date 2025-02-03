@@ -1,16 +1,22 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
+import { IScriptApp } from "../../domain/abstractions/i-script";
 import CueEditor from "../../domain/entities/cue-editor";
 import ScriptEditor from "../../domain/entities/script-editor";
-import BeatApp from "../sources/beat-app"
 
 export class Editors {
-  constructor(private scriptApp: BeatApp, private cueApp: ICueApp) { }
+  readonly scriptEditor: ScriptEditor
+  readonly cueEditor: CueEditor
+
+  constructor(private scriptApp: IScriptApp, private cueApp: ICueApp) {
+    this.scriptEditor = new ScriptEditor(this.scriptApp)
+    this.cueEditor = new CueEditor(this.cueApp)
+  }
 
   getScriptEditor(): ScriptEditor {
-    return new ScriptEditor(this.scriptApp)
+    return this.scriptEditor
   }
 
   getCueEditor(): CueEditor {
-    return new CueEditor(this.cueApp)
+    return this.cueEditor
   }
 }

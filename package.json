@@ -1,16 +1,25 @@
 {
+  "scripts": {
+    "build:beat:esbuild": "./node_modules/.bin/esbuild bin/beat/plugin.ts --bundle --outdir=$HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin",
+    "build:beat:webpack": "npx webpack && cp ./dist/beat/plugin.js $HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin"
+  },
+  "dependencies": {
+    "events": "^3.3.0",
+    "osc": "^2.4.5",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.8.0"
+  },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "esbuild": "0.24.2",
     "eslint": "^9.19.0",
     "globals": "^15.14.0",
     "openapi-typescript": "^7.6.1",
     "prettier": "^3.4.2",
+    "ts-loader": "^9.5.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.22.0"
-  },
-  "dependencies": {
-    "osc": "^2.4.5",
-    "reflect-metadata": "^0.2.2",
-    "tsyringe": "^4.8.0"
+    "typescript-eslint": "^8.22.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
   }
 }

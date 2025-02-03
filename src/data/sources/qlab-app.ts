@@ -32,7 +32,9 @@ export default class QLabApp implements ICueApp {
     return []
   }
 
-  async pull() {
+  async pull(...ids: string[]) {
+    console.log(ids)
+    return []
   }
 
   async select() {

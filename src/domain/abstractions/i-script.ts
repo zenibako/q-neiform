@@ -1,5 +1,6 @@
-import { IMenuItem } from "../../data/transfer-objects/menu";
+import { IMenuItem } from "../entities/menu";
 
 export interface IScriptApp {
-  setMenu(topLevelTitle: string, children: IMenuItem[]): void
+  mountMenu(topLevelTitle: string, children: IMenuItem[]): void
+  pullOutline(): Beat.Scene[]
 }

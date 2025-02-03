@@ -17,7 +17,9 @@ export default class Script {
   }
 
   pullCues(): Cue[] {
-    const cues = this.scenes.map(({ sceneNumber, stringForDisplay, typeAsString, color }) => new Cue(sceneNumber, stringForDisplay, typeAsString(), color))
+    const cues = this.scenes.map(
+      ({ sceneNumber, stringForDisplay, typeAsString, color }) => new Cue(sceneNumber, stringForDisplay, typeAsString(), color)
+    )
     return cues
   }
 }

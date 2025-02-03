@@ -1,10 +1,10 @@
-import { IMenuItem, MenuItem } from "../transfer-objects/menu"
+import { IMenuItem, MenuItem } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 
 export default class BeatApp implements IScriptApp {
   constructor() { }
 
-  getOutline() {
+  pullOutline() {
     return Beat.outline()
   }
 

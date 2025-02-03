@@ -1,4 +1,4 @@
-import osc from "osc"
+import osc from "osc/dist/osc-module"
 import OscBundle from "./osc-bundle"
 import { getMapping } from "../../common/qlab-helper"; // TODO: Make less specific to QLab
 import OscPacket from "./osc-packet";

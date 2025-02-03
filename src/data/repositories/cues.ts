@@ -1,3 +1,4 @@
+import { ICueApp } from "../../domain/abstractions/i-cues";
 import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
 // import StageToken, { StageTokenType } from "../../domain/entities/StageToken";
@@ -10,13 +11,14 @@ enum Phase {
     Moves = 'moves',
 }
 
-@autoInjectable()
 export default class Cues {
     private mappingByCueNumber: Record<string, string> = {}
     private triggerColorMap: Record<string, string>  = {};
     private parentChildIdMap: Record<string, string[]>  = {};
 
-    constructor() {}
+    constructor(
+        private oscData: ICueApp
+    ) {}
 
     get(cueNumber: number, parentNumber?: number): Cue {
         let id, color
@@ -71,6 +73,10 @@ export default class Cues {
     }
 
     async set(...cues: Cue[]) {
+        if (!this.oscData.initialized) {
+            await this.oscData.initialize()
+        }
+
         const phaseValues = Object.values(Phase) as string[]
         phaseValues.forEach(async phase => {
             const bundles = cues.map(cue => new OscBundle(phase).addFromCue(cue))

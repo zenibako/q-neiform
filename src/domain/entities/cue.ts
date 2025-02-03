@@ -1,6 +1,13 @@
 // import OscDataSource from "../../data/data-sources/OscDataSource"
 // import OscBundle from "../../data/data-transfer-objects/OscBundle"
- import { ICue } from "../abstractions/i-cues"
+import { ICue } from "../abstractions/i-cues"
+
+interface StageToken {
+  source: {
+    mediaType?: string
+  }
+  getType(): string
+}
 
 export default class Cue implements ICue {
   isNewCue: boolean
@@ -43,8 +50,8 @@ export default class Cue implements ICue {
       return 'group'
     }
 
-    const { mediaType, filepath } = source;
-    if (mediaType && fs.existsSync(filepath)) {
+    const { mediaType } = source;
+    if (mediaType) {
       return mediaType;
     }
 
