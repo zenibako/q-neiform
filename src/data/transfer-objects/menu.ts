@@ -1,16 +1,24 @@
+import { IActionableUseCase, } from "../../domain/abstractions/i-use-cases"
+
 export interface IMenuItem {
   isSeparator: boolean
 }
 
 export class MenuItem implements IMenuItem {
-  isSeparator = false
-  constructor(
-    public title: string,
-    public callback: () => void,
-    public keyboardShortcuts: string[] = [],
-  ) { }
+  public title: string
+  public keyboardShortcuts: string[] = []
+  public isSeparator = false
+
+  constructor(private useCase: IActionableUseCase) {
+    this.title = useCase.getLabel()
+    this.keyboardShortcuts = useCase.getKeyboardShortcut()
+  }
+
+  callback() {
+    this.useCase.execute()
+  }
 }
 
 export class Separator implements IMenuItem {
-  isSeparator = true
+  public isSeparator = true
 }

@@ -4,7 +4,11 @@ import { getMapping } from "../../common/qlab-helper"; // TODO: Make less specif
 import OscPacket from "./osc-packet";
 
 export default class OscUdpPort {
-    target: object
+    target: {
+      on(message: string, callback: (input: OscPacket) => void): void
+      on(message: string, callback: (input: string) => void): void
+      close(): void
+    }
     isProcessing = false
     newCueIds: string[] = []
     replyCount = 0

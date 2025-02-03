@@ -1,8 +1,11 @@
-export interface IOscData {
-  initialized: boolean
+export interface ICueApp {
+  name: string
 
+  initialized: boolean
   initialize(): Promise<void>
-  send(...bundles: ICueCommandBundle[]): Promise<string[]>
+
+  push(...bundles: ICueCommandBundle[]): Promise<string[]>
+  pull(...ids: string[]): Promise<ICueCommandBundle[]>
 }
 
 export interface ICue {

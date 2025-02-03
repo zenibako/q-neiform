@@ -1,13 +1,14 @@
 import { IMenuItem, MenuItem } from "../transfer-objects/menu"
+import { IScriptApp } from "../../domain/abstractions/i-script"
 
-export default class BeatData {
+export default class BeatApp implements IScriptApp {
   constructor() { }
 
   getOutline() {
     return Beat.outline()
   }
 
-  setMenu(topLevelTitle: string, children: IMenuItem[]) {
+  mountMenu(topLevelTitle: string, children: IMenuItem[]) {
     Beat.menu(topLevelTitle, children.map((item) => {
       if (item.isSeparator) {
         return Beat.separatorMenuItem()

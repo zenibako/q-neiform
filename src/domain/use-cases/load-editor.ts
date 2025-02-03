@@ -1,9 +1,11 @@
-import { Interfaces } from "../../data/repositories/interfaces";
+import { Editors } from "../../data/repositories/editors";
 
-export default class LoadEditorPlugin {
-  constructor(private interfaces: Interfaces) {}
+export default class ConnectApps {
+  constructor(private editors: Editors) {}
 
   execute() {
-    this.interfaces.initializeMenu()
+    const scriptEditor = this.editors.getScriptEditor()
+    const cueEditor = this.editors.getCueEditor()
+    scriptEditor.initialize(cueEditor.getName())
   }
 }

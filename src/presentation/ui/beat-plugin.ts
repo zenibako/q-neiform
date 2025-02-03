@@ -1,11 +1,14 @@
-import { Interfaces } from "../../data/repositories/interfaces";
-import BeatData from "../../data/sources/beat-data";
-import OscData from "../../data/sources/osc-data";
-import LoadEditorPlugin from "../../domain/use-cases/load-editor";
+import { Editors } from "../../data/repositories/editors";
+import BeatApp from "../../data/sources/beat-app"
+import QLabApp from "../../data/sources/qlab-app";
+import ConnectApps from "../../domain/use-cases/load-editor";
 
-const beat = new BeatData()
-const osc = new OscData()
+export default class BeatPlugin {
+  contructor() {
+    const beat = new BeatApp()
+    const osc = new QLabApp()
+    const editors = new Editors(beat, osc)
 
-const interfaces = new Interfaces(beat, osc)
-
-new LoadEditorPlugin(interfaces).execute()
+    new ConnectApps(editors).execute()
+  }
+}

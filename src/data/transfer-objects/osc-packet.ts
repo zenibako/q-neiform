@@ -1,5 +1,5 @@
-import { CueCommand } from "../../domain/abstractions/ICueCommand"
-import OscArg from "./OscArg"
+import { CueCommand } from "../../domain/abstractions/i-cues"
+import OscArg from "./osc-arg"
 
 export default class OscPacket implements CueCommand {
     address: string
