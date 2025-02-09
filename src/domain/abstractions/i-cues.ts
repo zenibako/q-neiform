@@ -4,8 +4,8 @@ export interface ICueApp {
   initialized: boolean
   initialize(): Promise<void>
 
-  push(...bundles: ICueCommandBundle[]): Promise<string[]>
-  pull(...ids: string[]): Promise<ICueCommandBundle[]>
+  // push(...bundles: ICueCommandBundle[]): Promise<string[]>
+  // pull(...ids: string[]): Promise<ICueCommandBundle[]>
 }
 
 export interface ICue {

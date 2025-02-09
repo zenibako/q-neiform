@@ -1,4 +1,4 @@
-import { IMenuItem, MenuItem } from "../../domain/entities/menu"
+import { Menu, MenuItem } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 
 export default class BeatApp implements IScriptApp {
@@ -8,14 +8,14 @@ export default class BeatApp implements IScriptApp {
     return Beat.outline()
   }
 
-  mountMenu(topLevelTitle: string, children: IMenuItem[]) {
-    Beat.menu(topLevelTitle, children.map((item) => {
-      if (item.isSeparator) {
+  mountMenu(menu: Menu) {
+    Beat.menu(menu.title, menu.getMenuItems().map((item) => {
+      if (item?.title) {
         return Beat.separatorMenuItem()
       }
 
-      const { title, keyboardShortcuts, callback } = item as MenuItem
-      return Beat.menuItem(title, keyboardShortcuts, callback)
+      const { title, keyboardShortcuts, click } = item as MenuItem
+      return Beat.menuItem(title, keyboardShortcuts ?? [], click)
     }))
   }
 }

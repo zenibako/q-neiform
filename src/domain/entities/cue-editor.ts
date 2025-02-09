@@ -1,5 +1,5 @@
 import { ICueApp } from "../abstractions/i-cues";
-import Cue from "./cue";
+// import Cue from "./cue.ts.bak";
 import Script from "./script";
 
 export default class CueEditor {
@@ -9,12 +9,15 @@ export default class CueEditor {
     return this.cueApp.name
   }
 
-  getCueList(): Cue[] {
-    return this.cueApp.getCueList()
+  async getCueList(): Promise<object[]> {
+  //async getCueList(): Promise<Cue[]> {
+    // return this.cueApp.getCueList()
+    return []
   }
 
-  pushUpdates(script: Script) {
+  async pushUpdates(script: Script) {
     const cues = script.pullCues()
-    this.cueApp.push(cues)
+    //this.cueApp.push(cues)
+    return cues
   }
 }

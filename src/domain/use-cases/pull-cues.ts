@@ -1,25 +1,21 @@
 import { IEditors } from "../abstractions/i-editors";
-import { IActionableUseCase } from "../abstractions/i-use-cases";
+import { IUseCase } from "../abstractions/i-use-cases";
 
-export default class PullCuesIntoScript implements IActionableUseCase {
+export default class PullCuesIntoScript implements IUseCase {
   constructor(private editors: IEditors) { }
 
-  execute() {
+  async execute() {
+    /*
     const cueEditor = this.editors.getCueEditor()
-    const cueList = cueEditor.getCueList()
+    const cueList = await cueEditor.getCueList()
 
     const scriptEditor = this.editors.getScriptEditor()
     const script = scriptEditor.getScript()
     script.mapCues(cueList)
+    */
+
+    console.log('PullCuesIntoScript', this.editors)
 
     return this
-  }
-
-  getLabel() {
-    return "Pull Cues"
-  }
-
-  getKeyboardShortcut(): string[] {
-    return []
   }
 }

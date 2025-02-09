@@ -1,7 +1,9 @@
-import OscPacket from "../transfer-objects/osc-packet"
-import OscBundle from "../transfer-objects/osc-bundle";
-import OscUdpPort from "../transfer-objects/osc-udp-port";
-import { ICueApp, ICueCommandBundle } from "../../domain/abstractions/i-cues";
+// import OscPacket from "../transfer-objects/osc-packet.ts.bak"
+// import OscBundle from "../transfer-objects/osc-bundle.ts.bak";
+// import OscUdpPort from "../transfer-objects/osc-udp-port.ts.bak";
+// import { ICueApp, ICueCommandBundle } from "../../domain/abstractions/i-cues";
+
+import { ICueApp } from "../../domain/abstractions/i-cues"
 
 const CONNECT_PHASE = 'connect'
 
@@ -9,24 +11,28 @@ export default class QLabApp implements ICueApp {
   public name
   public initialized = false
 
-  private queue: OscBundle[] = []
-  private mappingByCueNumber: Record<number, string> = {}
+  // private queue: OscBundle[] = []
+  // private mappingByCueNumber: Record<number, string> = {}
 
   constructor() {
     this.name = "QLab"
   }
 
   async initialize(passcode?: string) {
+    /*
     await this.send(
       new OscBundle(
         CONNECT_PHASE,
         new OscPacket('/connect', passcode)
       )
     )
+    */
+    console.log(CONNECT_PHASE, passcode)
 
     this.initialized = true
   }
 
+  /*
   async push(...bundles: ICueCommandBundle[]) {
     console.log(bundles)
     return []
@@ -58,4 +64,5 @@ export default class QLabApp implements ICueApp {
       })
     )
   }
+  */
 }

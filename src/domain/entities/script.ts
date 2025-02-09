@@ -1,9 +1,17 @@
-import Cue from "./cue";
+// import Cue from "./cue.ts.bak";
+
+class Cue {
+  constructor(
+    public id: string
+  ) {
+  }
+}
 
 export default class Script {
   cuesToCueAppId: Map<string, Cue>
 
-  constructor(private scenes: Beat.Scene[]) {
+  constructor() {
+  //constructor(private scenes: Beat.Scene[]) {
     this.cuesToCueAppId = new Map<string, Cue>()
   }
 
@@ -17,9 +25,12 @@ export default class Script {
   }
 
   pullCues(): Cue[] {
+    /*
     const cues = this.scenes.map(
       ({ sceneNumber, stringForDisplay, typeAsString, color }) => new Cue(sceneNumber, stringForDisplay, typeAsString(), color)
     )
     return cues
+    */
+    return []
   }
 }

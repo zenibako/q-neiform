@@ -1,24 +1,53 @@
-import { IActionableUseCase, } from "../abstractions/i-use-cases"
+import { IUseCase } from "../abstractions/i-use-cases"
 
 export interface IMenuItem {
-  isSeparator: boolean
+  title: string | null
+}
+
+export class Menu {
+  private menuItemSections: IMenuItem[][]
+  constructor(
+    public title: string,
+    ...menuItemSections: MenuItem[][]
+  ) {
+    this.menuItemSections = menuItemSections ?? []
+  }
+
+  getMenuItems(): IMenuItem[] {
+    const sections = this.menuItemSections ?? []
+
+    const menuItems: IMenuItem[] = []
+    for (let i = 0; i++; i < sections.length) {
+      if (i < 0) {
+        menuItems.push(new Separator())
+        continue
+      }
+
+      const sectionMenuItems = sections[i] ?? []
+      for (const menuItem of sectionMenuItems) {
+        menuItems.push(menuItem)
+      }
+    }
+
+    return menuItems
+  }
 }
 
 export class MenuItem implements IMenuItem {
-  public title: string
-  public keyboardShortcuts: string[] = []
-  public isSeparator = false
+  constructor(
+    public title: string,
+    private useCase?: IUseCase, 
+    public keyboardShortcuts?: string[]
+  ) {}
 
-  constructor(private useCase: IActionableUseCase) {
-    this.title = useCase.getLabel()
-    this.keyboardShortcuts = useCase.getKeyboardShortcut()
-  }
-
-  callback() {
-    this.useCase.execute()
+  click() {
+    return this.useCase?.execute()
   }
 }
 
-export class Separator implements IMenuItem {
-  public isSeparator = true
+class Separator implements IMenuItem {
+  public title: null
+  constructor() {
+    this.title = null
+  }
 }

@@ -1,13 +1,12 @@
 import { Editors } from "../../data/repositories/editors";
-import { IActionableUseCase, IGroupUseCase } from "../abstractions/i-use-cases";
+import { Menu } from "../entities/menu";
 
-export default class InitApps implements IGroupUseCase {
+export default class InitApps {
   constructor(private editors: Editors) {}
 
-  execute(...useCases: IActionableUseCase[]): IGroupUseCase {
+  execute(menu: Menu) {
     const scriptEditor = this.editors.getScriptEditor()
-    const cueEditor = this.editors.getCueEditor()
-    scriptEditor.initialize(cueEditor.getName(), useCases)
+    scriptEditor.initialize(menu)
     return this
   }
 }

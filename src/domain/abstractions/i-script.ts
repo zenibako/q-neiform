@@ -1,6 +1,6 @@
-import { IMenuItem } from "../entities/menu";
+import { Menu } from "../entities/menu";
 
 export interface IScriptApp {
-  mountMenu(topLevelTitle: string, children: IMenuItem[]): void
+  mountMenu(menu: Menu): void
   pullOutline(): Beat.Scene[]
 }

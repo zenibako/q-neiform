@@ -1,5 +1,5 @@
 import { ICue, ICueCommandBundle } from "../../domain/abstractions/i-cues"
-import OscPacket from "./../transfer-objects/osc-packet"
+import OscPacket from "./osc-packet
 
 export default class OscBundle implements ICueCommandBundle {
     packets: OscPacket[] = []
