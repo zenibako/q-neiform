@@ -1,5 +1,4 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
-import OscPort from "../transfer-objects/osc-port";
 import ILogger from "../../domain/abstractions/i-logger";
 import Script from "../../domain/entities/script";
 // import Cue from "../../domain/entities/cue";
@@ -24,10 +23,14 @@ export default class Cues {
   constructor(private cueApp: ICueApp, private logger: ILogger) {
   }
 
-  async initialize(osc: OscPort, password?: string) {
+  async initialize(password?: string) {
     this.logger.log("Initializing cues...")
-    await this.cueApp.connect(osc, password)
-    this.logger.log("Initialized")
+    try {
+      await this.cueApp.connect(password)
+      this.logger.log("Initialized")
+    } catch (e) {
+      this.logger.log((e as Error).message ?? e)
+    }
   }
 
   getName(): string {

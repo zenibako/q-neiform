@@ -1,46 +1,43 @@
-import OscPacket from "../transfer-objects/osc-packet"
 import OscBundle from "../transfer-objects/osc-bundle";
-import OscPort from "../transfer-objects/osc-port";
 // import { ICueApp, ICueCommandBundle } from "../../domain/abstractions/i-cues";
 
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
-
-const CONNECT_PHASE = 'connect'
+import OSC from "osc-js";
 
 export default class QLabApp implements ICueApp {
   public readonly name = "QLab"
-  public readonly host
-  public readonly port
-
-  private osc?: OscPort
+  public readonly osc: OSC
 
   constructor(private logger: ILogger, host: string = "localhost", port: number = 53000) {
-    this.host = host
-    this.port = port
+    this.osc = new OSC({
+      plugin: new OSC.BridgePlugin({
+        udpClient: { port: port + 1 },
+        udpServer: { port, host }
+      })
+    })
   }
 
-  public isConnected() {
-    return !!this.osc
+  connect(password: string = "") {
+    return new Promise((resolve, reject) => {
+      this.osc.on(`/connect/${password}`, (reply: object) => {
+        this.logger.log(JSON.stringify(reply))
+        resolve(reply)
+      })
+      try {
+        this.osc.open()
+      } catch (e) {
+        reject(e)
+      }
+      this.logger.log('opened bridge port. waiting for response...')
+
+      const delay = 30000
+      setTimeout(() => reject(`Timed out after ${delay/1000} seconds.`), delay)
+    })
   }
 
   // private queue: OscBundle[] = []
   // private mappingByCueNumber: Record<number, string> = {}
-
-  async connect(osc: OscPort, passcode?: string) {
-    this.osc = osc
-    await this.osc.open()
-
-    this.logger.log("sending connect packet")
-    await this.send(
-      new OscBundle(
-        CONNECT_PHASE,
-        new OscPacket('/connect', passcode)
-      )
-    )
-    this.logger.log(CONNECT_PHASE + ' ' + passcode)
-  }
-
   /*
   async push(...bundles: ICueCommandBundle[]) {
     console.log(bundles)
@@ -57,20 +54,16 @@ export default class QLabApp implements ICueApp {
   */
 
   private async send(...bundles: OscBundle[]): Promise<string[]> {
-    if (!this.isConnected()) {
-      throw new Error('Not connected.')
-    }
-
     return Promise.all(
       bundles.map(async bundle => {
         if (!bundle.packets.length) {
           throw new Error('No packets set.')
         }
 
-        await this.osc!.send(bundle)
+        //await this.osc!.send(bundle)
 
         return `processed all replies for ${bundle.phase}`
       })
     )
-  } 
+  }
 }

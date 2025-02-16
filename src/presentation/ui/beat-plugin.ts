@@ -16,7 +16,7 @@ export default class BeatPlugin {
     beat.log("initialize start")
     const scripts = new Scripts(beat)
     const cues = new Cues(qlab, beat)
-    const menus = new Menus(beat)
+    const menus = new Menus(beat, beat)
 
     const pushMenuItem = new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues))
     const pullMenuItem = new MenuItem("Pull from Cues", new PullCuesIntoScript(cues, scripts))

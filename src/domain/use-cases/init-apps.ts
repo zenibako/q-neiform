@@ -7,8 +7,8 @@ export default class InitApps {
   constructor(private scripts: Scripts, private cues: Cues, private menus: Menus) {}
 
   async execute(menu: Menu) {
-    const { password, oscPort } = await this.menus.initialize()
-    await this.cues.initialize(oscPort, password)
+    // const { password, oscPort } = await this.menus.initialize()
+    // await this.cues.initialize(oscPort, password)
     this.menus.updateMenu(menu)
     return this
   }

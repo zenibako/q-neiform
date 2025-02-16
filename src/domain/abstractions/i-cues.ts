@@ -1,12 +1,6 @@
-import OscPort from "../../data/transfer-objects/osc-adapter"
-
 export interface ICueApp {
   name: string
-  host: string
-  port: number
-  connect(osc: OscPort, password?: string): Promise<void>
-  isConnected(): boolean
-
+  connect(password?: string): Promise<unknown>
   // push(...bundles: ICueCommandBundle[]): Promise<string[]>
   // pull(...ids: string[]): Promise<ICueCommandBundle[]>
 }
