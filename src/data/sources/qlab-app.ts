@@ -7,32 +7,33 @@ import OSC from "osc-js";
 
 export default class QLabApp implements ICueApp {
   public readonly name = "QLab"
-  public readonly osc: OSC
 
-  constructor(private logger: ILogger, host: string = "localhost", port: number = 53000) {
+  public osc?: OSC
+
+  constructor(private logger: ILogger, private host: string = "localhost", private port: number = 53000) { }
+
+  connect(password: string = "") {
+    const { port, host } = this
     this.osc = new OSC({
       plugin: new OSC.BridgePlugin({
         udpClient: { port: port + 1 },
         udpServer: { port, host }
       })
     })
-  }
-
-  connect(password: string = "") {
     return new Promise((resolve, reject) => {
+      if (!this.osc) {
+        reject('No OSC server set')
+        return
+      }
       this.osc.on(`/connect/${password}`, (reply: object) => {
         this.logger.log(JSON.stringify(reply))
         resolve(reply)
       })
-      try {
-        this.osc.open()
-      } catch (e) {
-        reject(e)
-      }
+      this.osc.open()
       this.logger.log('opened bridge port. waiting for response...')
 
       const delay = 30000
-      setTimeout(() => reject(`Timed out after ${delay/1000} seconds.`), delay)
+      setTimeout(() => reject(`Timed out after ${delay / 1000} seconds.`), delay)
     })
   }
 
