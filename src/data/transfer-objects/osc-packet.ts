@@ -1,7 +1,8 @@
-import { CueCommand } from "../../domain/abstractions/i-cues"
-import OscArg from "./osc-arg.ts.bak"
+// import { CueCommand } from "../../domain/abstractions/i-cues"
+import OscArg from "./osc-arg"
 
-export default class OscPacket implements CueCommand {
+//export default class OscPacket implements CueCommand {
+export default class OscPacket {
     address: string
     args: OscArg[]
 

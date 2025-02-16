@@ -1,21 +1,32 @@
-import { Editors } from "../../data/repositories/editors";
-import BeatApp from "../../data/sources/beat-app"
+import Cues from "../../data/repositories/cues";
+import Menus from "../../data/repositories/menus";
+import { Scripts } from "../../data/repositories/scripts";
+import BeatApp, { Mode } from "../../data/sources/beat-app"
 import QLabApp from "../../data/sources/qlab-app";
 import { Menu, MenuItem } from "../../domain/entities/menu";
 import InitApps from "../../domain/use-cases/init-apps";
 import PullCuesIntoScript from "../../domain/use-cases/pull-cues";
 import PushCuesFromScript from "../../domain/use-cases/push-cues";
 
-export default class BeatPlugin {
-  contructor() {
-    const beat = new BeatApp()
-    const qlab = new QLabApp()
-    const editors = new Editors(beat, qlab)
+const beat = new BeatApp(Mode.DEVELOPMENT)
+const qlab = new QLabApp(beat)
 
-    const pushMenuItem = new MenuItem("Push to Cues", new PushCuesFromScript(editors))
-    const pullMenuItem = new MenuItem("Pull from Cues", new PullCuesIntoScript(editors))
+export default class BeatPlugin {
+  async initialize() {
+    beat.log("initialize start")
+    const scripts = new Scripts(beat)
+    const cues = new Cues(qlab, beat)
+    const menus = new Menus(beat)
+
+    const pushMenuItem = new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues))
+    const pullMenuItem = new MenuItem("Pull from Cues", new PullCuesIntoScript(cues, scripts))
     const menu = new Menu("QLab", [pushMenuItem, pullMenuItem])
 
-    new InitApps(editors).execute(menu)
+    try {
+      await (new InitApps(scripts, cues, menus)).execute(menu)
+    } catch (e) {
+      beat.log((e as Error).message ?? JSON.stringify(e))
+    }
+    beat.log("initalize end")
   }
 }

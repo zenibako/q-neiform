@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket Test</title>
+</head>
+
+<body>
+  <script type="text/javascript" src="lib/osc.min.js"></script>
+  <script type="text/javascript">
+    let ws
+
+    function open(host, port) {
+      ws = new OSC({plugin: new OSC.WebsocketClientPlugin({host, port})})
+      ws.open()
+    }
+
+    function send(address, args) {
+      try {
+        /*
+        // Listen for incoming OSC messages.
+        this.target.on("message", (oscMsg: object, timeTag: object, info: object) => {
+          this.logger.log("An OSC message just arrived! " + oscMsg)
+          this.logger.log("Timetag: " + timeTag)
+          this.logger.log("Remote info is: " + info)
+        */
+
+        if (!ws) {
+          throw new Error("You must call the open function first")
+        }
+
+        ws.on(address, (reply) => {
+          Beat.custom.handleOscReply(reply)
+        })
+        ws.send(new OSC.Message(address, args))
+      } catch (e) {
+        Beat.custom.handleError(e)
+      }
+    }
+
+  </script>
+</body>
+
+</html>

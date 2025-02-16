@@ -1,4 +1,7 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
+import OscPort from "../transfer-objects/osc-port";
+import ILogger from "../../domain/abstractions/i-logger";
+import Script from "../../domain/entities/script";
 // import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
 // import StageToken, { StageTokenType } from "../../domain/entities/StageToken";
@@ -18,10 +21,29 @@ export default class Cues {
   // private triggerColorMap: Record<string, string> = {};
   // private parentChildIdMap: Record<string, string[]> = {};
 
-  constructor(
-    private oscData: ICueApp
-  ) {
-    console.log(this.oscData)
+  constructor(private cueApp: ICueApp, private logger: ILogger) {
+  }
+
+  async initialize(osc: OscPort, password?: string) {
+    this.logger.log("Initializing cues...")
+    await this.cueApp.connect(osc, password)
+    this.logger.log("Initialized")
+  }
+
+  getName(): string {
+    return this.cueApp.name
+  }
+
+  async getCueList(): Promise<object[]> {
+  //async getCueList(): Promise<Cue[]> {
+    // return this.cueApp.getCueList()
+    return []
+  }
+
+  async pushUpdates(script: Script) {
+    const cues = script.pullCues()
+    //this.cueApp.push(cues)
+    return cues
   }
 
   /*

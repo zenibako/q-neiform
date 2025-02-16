@@ -1,5 +1,5 @@
 import { ICue, ICueCommandBundle } from "../../domain/abstractions/i-cues"
-import OscPacket from "./osc-packet
+import OscPacket from "./osc-packet"
 
 export default class OscBundle implements ICueCommandBundle {
     packets: OscPacket[] = []
@@ -26,24 +26,21 @@ export default class OscBundle implements ICueCommandBundle {
     }
 
     addFromCue(cue: ICue) {
-        const { isNewCue, type, cueAddress, number, name, mode, fileTarget, color } = cue
-        if (isNewCue) {
+        const { id, type, address, number, name, mode, color } = cue
+        if (!id) {
             this.addPackets(
                 new OscPacket('/new', type)
             )
         }
 
         this.addPacketsWithArgsOnly(
-            new OscPacket(`${cueAddress}/number`, number),
-            new OscPacket(`${cueAddress}/name`, name),
-            new OscPacket(`${cueAddress}/mode`, mode),
-            new OscPacket(`${cueAddress}/colorName`, color)
+            new OscPacket(`${address}/number`, number),
+            new OscPacket(`${address}/name`, name),
+            new OscPacket(`${address}/mode`, mode),
+            new OscPacket(`${address}/colorName`, color)
         )
     
-        if (type === 'audio' && fileTarget) {
-            this.addPackets(new OscPacket(`${cueAddress}/fileTarget`, fileTarget))
-        }
-
+        /*
         if (this.phase === 'moves') {
             const { id, parentId, childIndex } = cue;
             if (id && parentId && childIndex) {
@@ -52,6 +49,7 @@ export default class OscBundle implements ICueCommandBundle {
                 )
             }
         }
+        */
         
         return this
     }

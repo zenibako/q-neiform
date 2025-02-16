@@ -1,35 +1,44 @@
-// import OscPacket from "../transfer-objects/osc-packet.ts.bak"
-// import OscBundle from "../transfer-objects/osc-bundle.ts.bak";
-// import OscUdpPort from "../transfer-objects/osc-udp-port.ts.bak";
+import OscPacket from "../transfer-objects/osc-packet"
+import OscBundle from "../transfer-objects/osc-bundle";
+import OscPort from "../transfer-objects/osc-port";
 // import { ICueApp, ICueCommandBundle } from "../../domain/abstractions/i-cues";
 
 import { ICueApp } from "../../domain/abstractions/i-cues"
+import ILogger from "../../domain/abstractions/i-logger";
 
 const CONNECT_PHASE = 'connect'
 
 export default class QLabApp implements ICueApp {
-  public name
-  public initialized = false
+  public readonly name = "QLab"
+  public readonly host
+  public readonly port
+
+  private osc?: OscPort
+
+  constructor(private logger: ILogger, host: string = "localhost", port: number = 53000) {
+    this.host = host
+    this.port = port
+  }
+
+  public isConnected() {
+    return !!this.osc
+  }
 
   // private queue: OscBundle[] = []
   // private mappingByCueNumber: Record<number, string> = {}
 
-  constructor() {
-    this.name = "QLab"
-  }
+  async connect(osc: OscPort, passcode?: string) {
+    this.osc = osc
+    await this.osc.open()
 
-  async initialize(passcode?: string) {
-    /*
+    this.logger.log("sending connect packet")
     await this.send(
       new OscBundle(
         CONNECT_PHASE,
         new OscPacket('/connect', passcode)
       )
     )
-    */
-    console.log(CONNECT_PHASE, passcode)
-
-    this.initialized = true
+    this.logger.log(CONNECT_PHASE + ' ' + passcode)
   }
 
   /*
@@ -45,10 +54,11 @@ export default class QLabApp implements ICueApp {
 
   async select() {
   }
+  */
 
   private async send(...bundles: OscBundle[]): Promise<string[]> {
-    if (!this.initialized) {
-      this.initialize()
+    if (!this.isConnected()) {
+      throw new Error('Not connected.')
     }
 
     return Promise.all(
@@ -57,12 +67,10 @@ export default class QLabApp implements ICueApp {
           throw new Error('No packets set.')
         }
 
-        const oscPort = new OscUdpPort()
-        await oscPort.send(bundle)
+        await this.osc!.send(bundle)
 
         return `processed all replies for ${bundle.phase}`
       })
     )
-  }
-  */
+  } 
 }

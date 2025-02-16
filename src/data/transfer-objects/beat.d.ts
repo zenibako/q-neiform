@@ -49,6 +49,14 @@ declare namespace Beat {
     ranges: { bold: Range[]; underline: Range[]; italic: Range[]; notes: Range[] } // Specific in-line ranges
   }
 
+  type ModalInput = {
+    name: string
+    label: string
+    type: "text" | "dropdown" | "checkbox"
+    placeholder?: string
+    items?: string[]
+  }
+
   function log(message: string)
   function lines(): Line[]
   function outline(): Scene[]
@@ -84,7 +92,7 @@ declare namespace Beat {
   function menuItem(title: string, keyboardShortcuts: string[], callback: () => void): MenuItem
   function separatorMenuItem(): MenuItem
   function menu(title: string, items: MenuItem[]): Menu
-  
+
   // Listeners
   function onTextChange(callback: (location: number, length: number) => void)
   function onOutlineChange(callback: (outline: Scene[]) => void)
@@ -94,4 +102,40 @@ declare namespace Beat {
   let onOutlineChangeDisabled: boolean
   let onSelectionChangeDisabled: boolean
   let onSceneIndexChangeDisabled: boolean
+
+  function openConsole(): void
+
+  type UI = object
+  type Window = {
+    title //— window title, can be changed at any time
+    resizable: boolean // — if the window can be resized by user, true by default
+    runJS(evalString: string) // sends JavaScript to be evaluated in the window
+    setHTML(htmlString) // — set window content (Note: This will wipe the existing JS scope in your window, and it's essentially treated as a newly-loaded page)
+    setRawHTML(htmlString) //— set window content, overriding any Beat injections (Warning: You won't be able to call any Beat methods after this)
+    close() //— close the window and run callback
+    focus() // — make this window key window
+    toggleFullScreen() // — toggle full screen mode
+    isFullScreen(): boolean // — checks if the window is in full screen mode (returns true/false)
+    setFrame(x, y, width, height) // — set window position and size
+    getFrame() // — returns position and size for the window
+    screenSize() // — returns size for the screen window has appeared on
+    screenFrame() // — returns the full frame for the screen ({ x: x, y: y, width: w, height: h })
+    gangWithDocumentWindow() // — attach the window to its document window (makes the window move along with the document window)
+    detachFromDocumentWindow() // — detach from document window
+  }
+
+  type CustomArg = OSC
+  let custom: Record<string, (arg: CustomArg) => void>
+  function call(customFunction: (arg: object) => void, arg: object)
+
+  function assetAsString(path: string): UI
+  function htmlWindow(ui: UI, height: number, width: number, callback: () => void): Window
+  function prompt(title: string, description: string, placeholder: string): string
+  function modal(opts: {
+    title: string
+    info: string
+    items: ModalInput[]
+  }): Record<string, string>
+
+  function end(): void
 }

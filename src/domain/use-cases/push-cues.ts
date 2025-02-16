@@ -1,15 +1,14 @@
-import { IEditors } from "../abstractions/i-editors";
+import Cues from "../../data/repositories/cues";
+import { Scripts } from "../../data/repositories/scripts";
 import { IUseCase } from "../abstractions/i-use-cases";
 
 export default class PushCuesFromScript implements IUseCase {
-  constructor(private editors: IEditors) { }
+  constructor(private scripts: Scripts, private cues: Cues) { }
 
   execute() {
-    const scriptEditor = this.editors.getScriptEditor()
-    const script = scriptEditor.getScript()
+    const script = this.scripts.getScript()
 
-    const cueEditor = this.editors.getCueEditor()
-    cueEditor.pushUpdates(script)
+    this.cues.pushUpdates(script)
     return this
   }
 }

@@ -1,8 +1,9 @@
-import { IEditors } from "../abstractions/i-editors";
+import Cues from "../../data/repositories/cues";
+import { Scripts } from "../../data/repositories/scripts";
 import { IUseCase } from "../abstractions/i-use-cases";
 
 export default class PullCuesIntoScript implements IUseCase {
-  constructor(private editors: IEditors) { }
+  constructor(private cues: Cues, private script: Scripts) {}
 
   async execute() {
     /*
@@ -13,8 +14,6 @@ export default class PullCuesIntoScript implements IUseCase {
     const script = scriptEditor.getScript()
     script.mapCues(cueList)
     */
-
-    console.log('PullCuesIntoScript', this.editors)
 
     return this
   }

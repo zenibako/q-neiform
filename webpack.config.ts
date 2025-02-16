@@ -1,9 +1,17 @@
-module.exports = {
+import path from "path"
+import webpack from "webpack"
+
+const config: webpack.Configuration = {
   mode: "development",
-  devtool: "inline-source-map",
   entry: "./src/beat.ts",
+  /*
+  externals: {
+    ws: "commonjs ws",
+  },
+  */
   output: {
-    filename: "./dist/beat/plugin.js"
+    path: path.resolve(__dirname, "dist", "beat"),
+    filename: "plugin.js"
   },
   resolve: {
     // Add `.ts` and `.tsx` as a resolvable extension.
@@ -22,3 +30,5 @@ module.exports = {
     ]
   }
 };
+
+export default config;
