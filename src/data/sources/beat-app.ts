@@ -21,19 +21,44 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
     Beat.log(message)
   }
 
-  async connectToWebSocket(): Promise<object> {
-    return new Promise((resolve, reject) => {
-      const { password = "", address, port } = Beat.modal({
-        title: "Connect to q-neiform OSC bridge.",
-        info: "q-neiform uses a Web Socket server to relay OSC messages to the cue server. Please set the values below or leave the defaults, then click OK to connect.",
-        items: [
-          { type: "text", name: "password", label: "Host Password", placeholder: `Enter the password in your cue server.` },
-          { type: "text", name: "address", label: "Host Address", placeholder: `${WS_DEFAULT_ADDRESS}` },
-          { type: "text", name: "port", label: "Host Port", placeholder: `${WS_DEFAULT_PORT}` },
-        ]
-      })
+  async connectToWebSocket(): Promise<unknown> {
+    const modalResponse = Beat.modal({
+      title: "Connect to q-neiform OSC bridge.",
+      info: "q-neiform uses a Web Socket server to relay OSC messages to the cue server. Please set the values below or leave the defaults, then click OK to connect.",
+      items: [
+        { type: "text", name: "address", label: "Host Address", placeholder: `${WS_DEFAULT_ADDRESS}` },
+        { type: "text", name: "port", label: "Host Port", placeholder: `${WS_DEFAULT_PORT}` },
+      ]
+    })
+    if (!modalResponse) {
+      Beat.end()
+      return
+    }
 
+    const { address, port } = modalResponse
+    const ui = Beat.assetAsString("ui.html")
+    if (address?.length) {
+      ui.replace(WS_DEFAULT_ADDRESS, address)
+    }
+    if (port?.length) {
+      ui.replace(WS_DEFAULT_PORT, port)
+    }
+
+    return new Promise((resolve, reject) => {
       Beat.custom = {
+        handleOpen: () => {
+          Beat.log("Handling open...")
+          const passModalResponse = Beat.modal({
+            title: "Connect to q-neiform OSC bridge.",
+            info: `Enter the password in your cue server.`,
+            items: [
+              { type: "text", name: "password", label: "Host Password" }
+            ]
+          })
+
+          Beat.log(`Sending connect message with password "${passModalResponse?.password}"...`)
+          return passModalResponse.password
+        },
         handleReply: (reply: object) => {
           Beat.log("success")
           resolve(reply)
@@ -44,10 +69,10 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
         }
       }
 
-      const ui = Beat.assetAsString("ui.html")
-      this.window = Beat.htmlWindow(ui, 100, 100, () => Beat.end())
-      this.window.runJS(`open("${address ?? WS_DEFAULT_ADDRESS}", ${port})`)
-      this.window.runJS(`send("${'/connect/' + password}")`)
+      this.window = Beat.htmlWindow(ui, 100, 100, () => {
+        Beat.log("Window closed. Ending plugin.")
+        Beat.end()
+      })
     })
   }
 

@@ -4,7 +4,7 @@ import { Scripts } from "../../data/repositories/scripts";
 import BeatApp, { Mode } from "../../data/sources/beat-app"
 import QLabApp from "../../data/sources/qlab-app";
 import { Menu, MenuItem } from "../../domain/entities/menu";
-import InitApps from "../../domain/use-cases/init-apps";
+import ConnectToBridge from "../../domain/use-cases/init-apps";
 import PullCuesIntoScript from "../../domain/use-cases/pull-cues";
 import PushCuesFromScript from "../../domain/use-cases/push-cues";
 
@@ -13,7 +13,7 @@ const qlab = new QLabApp(beat)
 
 export default class BeatPlugin {
   async initialize() {
-    beat.log("initialize start")
+    beat.log("starting plugin...")
     const scripts = new Scripts(beat)
     const cues = new Cues(qlab, beat)
     const menus = new Menus(beat, beat)
@@ -23,10 +23,10 @@ export default class BeatPlugin {
     const menu = new Menu("QLab", [pushMenuItem, pullMenuItem])
 
     try {
-      await (new InitApps(scripts, cues, menus)).execute(menu)
+      await new ConnectToBridge(menus).execute(menu)
     } catch (e) {
       beat.log((e as Error).message ?? JSON.stringify(e))
     }
-    beat.log("initalize end")
+    beat.log("plugin is loaded")
   }
 }

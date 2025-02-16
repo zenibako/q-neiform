@@ -105,7 +105,6 @@ declare namespace Beat {
 
   function openConsole(): void
 
-  type UI = object
   type Window = {
     title //— window title, can be changed at any time
     resizable: boolean // — if the window can be resized by user, true by default
@@ -128,8 +127,9 @@ declare namespace Beat {
   let custom: Record<string, (arg: CustomArg) => void>
   function call(customFunction: (arg: object) => void, arg: object)
 
-  function assetAsString(path: string): UI
+  function assetAsString(path: string): string
   function htmlWindow(ui: UI, height: number, width: number, callback: () => void): Window
+  function confirm(title: string, description: string): boolean
   function prompt(title: string, description: string, placeholder: string): string
   function modal(opts: {
     title: string

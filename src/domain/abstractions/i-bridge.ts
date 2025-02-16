@@ -1,3 +1,3 @@
 export interface IOscBridgeApp {
-  connectToWebSocket(): Promise<object>
+  connectToWebSocket(): Promise<unknown>
 }
