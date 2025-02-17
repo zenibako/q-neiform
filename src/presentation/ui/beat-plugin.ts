@@ -13,7 +13,7 @@ const qlab = new QLabApp(beat)
 
 export default class BeatPlugin {
   async initialize() {
-    beat.log("starting plugin...")
+    beat.log("Starting plugin...")
     const scripts = new Scripts(beat)
     const cues = new Cues(qlab, beat)
     const menus = new Menus(beat, beat)
@@ -25,8 +25,9 @@ export default class BeatPlugin {
     try {
       await new ConnectToBridge(menus).execute(menu)
     } catch (e) {
-      beat.log((e as Error).message ?? JSON.stringify(e))
+      beat.log("Error while connecting to bridge: " + ((e as Error).message ?? JSON.stringify(e)))
+      Beat.end()
     }
-    beat.log("plugin is loaded")
+    beat.log("Plugin is loaded")
   }
 }

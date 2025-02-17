@@ -18,6 +18,7 @@ export default class BridgeQlabWs extends Command {
     name: Flags.string({char: 'n', description: 'name to print'}),
     host: Flags.string({description: 'host address for QLab'}),
     port: Flags.integer({description: 'host port for QLab'}),
+    password: Flags.string({char: 'p', description: 'host password for QLab'}),
   }
 
   public async run(): Promise<void> {

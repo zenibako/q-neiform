@@ -5,6 +5,8 @@ import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
 
+const DELAY_MS = 30000
+
 export default class QLabApp implements ICueApp {
   public readonly name = "QLab"
 
@@ -16,8 +18,9 @@ export default class QLabApp implements ICueApp {
     const { port, host } = this
     this.osc = new OSC({
       plugin: new OSC.BridgePlugin({
-        udpClient: { port: port + 1 },
-        udpServer: { port, host }
+        udpClient: { port, host },      // Target QLab's port
+        udpServer: { port: port + 1 },  // This bridge's port
+        receiver: 'udp'
       })
     })
     return new Promise((resolve, reject) => {
@@ -25,15 +28,22 @@ export default class QLabApp implements ICueApp {
         reject('No OSC server set')
         return
       }
-      this.osc.on(`/connect/${password}`, (reply: object) => {
-        this.logger.log(JSON.stringify(reply))
+      this.osc.on(`/reply/connect/${password}`, (reply: unknown) => {
+        this.logger.log(`Received ${JSON.stringify(reply)}`)
         resolve(reply)
       })
+      this.osc.on("error", (error: unknown) => {
+        this.logger.log(`Received ${JSON.stringify(error)}`)
+        reject(error)
+      })
       this.osc.open()
-      this.logger.log('opened bridge port. waiting for response...')
-
-      const delay = 30000
-      setTimeout(() => reject(`Timed out after ${delay / 1000} seconds.`), delay)
+      this.logger.log(`Opened bridge port.`)
+      try {
+        this.logger.log(`Waiting for ${DELAY_MS / 1000} seconds...`)
+        setTimeout(() => reject(`Timed out after ${DELAY_MS / 1000} seconds.`), DELAY_MS)
+      } catch (e) {
+        reject(e)
+      }
     })
   }
 

@@ -5,7 +5,7 @@ import { Menu } from "../../domain/entities/menu"
 export default class Menus {
   constructor(private scriptApp: IScriptApp, private oscBridgeApp: IOscBridgeApp) {}
 
-  initialize() {
+  async initialize() {
     return this.oscBridgeApp.connectToWebSocket()
   }
 

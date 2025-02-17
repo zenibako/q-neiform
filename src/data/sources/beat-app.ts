@@ -26,8 +26,8 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
       title: "Connect to q-neiform OSC bridge.",
       info: "q-neiform uses a Web Socket server to relay OSC messages to the cue server. Please set the values below or leave the defaults, then click OK to connect.",
       items: [
-        { type: "text", name: "address", label: "Host Address", placeholder: `${WS_DEFAULT_ADDRESS}` },
-        { type: "text", name: "port", label: "Host Port", placeholder: `${WS_DEFAULT_PORT}` },
+        { type: "text", name: "address", label: "Address", placeholder: `${WS_DEFAULT_ADDRESS}` },
+        { type: "text", name: "port", label: "Port", placeholder: `${WS_DEFAULT_PORT}` },
       ]
     })
     if (!modalResponse) {
@@ -47,29 +47,28 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
     return new Promise((resolve, reject) => {
       Beat.custom = {
         handleOpen: () => {
-          Beat.log("Handling open...")
           const passModalResponse = Beat.modal({
             title: "Connect to q-neiform OSC bridge.",
             info: `Enter the password in your cue server.`,
             items: [
-              { type: "text", name: "password", label: "Host Password" }
+              { type: "text", name: "password", label: "Password" }
             ]
           })
 
-          Beat.log(`Sending connect message with password "${passModalResponse?.password}"...`)
-          return passModalResponse.password
+          return passModalResponse?.password ?? ""
         },
         handleReply: (reply: object) => {
-          Beat.log("success")
+          Beat.log(`Received reply ${JSON.stringify(reply)}`)
           resolve(reply)
         },
         handleError: (error: object) => {
-          Beat.log("error")
+          Beat.log(`Received error ${JSON.stringify(error)}`)
+          this.window?.close()
           reject(error)
         }
       }
 
-      this.window = Beat.htmlWindow(ui, 100, 100, () => {
+      this.window = Beat.htmlWindow(ui, 250, 50, () => {
         Beat.log("Window closed. Ending plugin.")
         Beat.end()
       })

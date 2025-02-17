@@ -12,15 +12,19 @@
   Beat.log("Opened.")
   Beat.callAndWait("Beat.custom.handleOpen()")
     .then((password) => {
-      Beat.log("Received " + password)
-      const address = '/connect/' + password
-      ws.on(address, (reply) => {
-        Beat.call(Beat.custom.handleReply(reply))
+      ws.on("", (reply) => {
+        Beat.call((arg) => Beat.custom.handleReply(arg), reply)
       })
-      ws.send(new OSC.Message(address, args))
-      setTimeout(() => `Timed out after ${delay / 1000} seconds.`, delay)
+      ws.on("error", (error) => {
+        Beat.call((arg) => Beat.custom.handleError(arg), error)
+      })
+      ws.send(new OSC.Message(`/connect/${password}`))
+      Beat.log(`Sent connect message. Waiting ${delay / 1000} seconds...`)
+      setTimeout(() => {
+        const error = `Timed out after ${delay / 1000} seconds.`
+        Beat.call((arg) => Beat.custom.handleError(arg), error)
+      }, delay)
     }, (error) => {
-      Beat.log(e?.message ?? e)
+      Beat.call((arg) => Beat.custom.handleError(arg), error)
     })
-    //Beat.call(Beat.custom.handleError(error))
 </script>

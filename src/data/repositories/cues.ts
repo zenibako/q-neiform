@@ -29,7 +29,7 @@ export default class Cues {
       await this.cueApp.connect(password)
       this.logger.log("Initialized")
     } catch (e) {
-      this.logger.log((e as Error).message ?? e)
+      this.logger.log("Error while initializing: " + ((e as Error).message ?? e))
     }
   }
 
