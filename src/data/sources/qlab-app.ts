@@ -14,7 +14,7 @@ export default class QLabApp implements ICueApp {
 
   constructor(private logger: ILogger, private host: string = "localhost", private port: number = 53000) { }
 
-  connect(password: string = "") {
+  connect() {
     const { port, host } = this
     this.osc = new OSC({
       plugin: new OSC.BridgePlugin({
@@ -28,18 +28,19 @@ export default class QLabApp implements ICueApp {
         reject('No OSC server set')
         return
       }
-      this.osc.on(`/reply/connect/${password}`, (reply: unknown) => {
-        this.logger.log(`Received ${JSON.stringify(reply)}`)
-        resolve(reply)
+
+      this.osc.on("/reply/*", ({ address, args }: OSC.Message) => {
+        const relayedMessage = new OSC.Message(address, ...args)
+        this.osc?.send(relayedMessage, { receiver: "ws" })
+        resolve("Successfully connected.")
       })
       this.osc.on("error", (error: unknown) => {
-        this.logger.log(`Received ${JSON.stringify(error)}`)
         reject(error)
       })
       this.osc.open()
       this.logger.log(`Opened bridge port.`)
       try {
-        this.logger.log(`Waiting for ${DELAY_MS / 1000} seconds...`)
+        this.logger.log(`Waiting for ${DELAY_MS / 1000} seconds for first relay...`)
         setTimeout(() => reject(`Timed out after ${DELAY_MS / 1000} seconds.`), DELAY_MS)
       } catch (e) {
         reject(e)

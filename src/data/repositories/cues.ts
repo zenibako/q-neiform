@@ -23,10 +23,10 @@ export default class Cues {
   constructor(private cueApp: ICueApp, private logger: ILogger) {
   }
 
-  async initialize(password?: string) {
+  async initialize() {
     this.logger.log("Initializing cues...")
     try {
-      await this.cueApp.connect(password)
+      await this.cueApp.connect()
       this.logger.log("Initialized")
     } catch (e) {
       this.logger.log("Error while initializing: " + ((e as Error).message ?? e))

@@ -1,6 +1,6 @@
 export interface ICueApp {
   name: string
-  connect(password?: string): Promise<unknown>
+  connect(): Promise<unknown>
   // push(...bundles: ICueCommandBundle[]): Promise<string[]>
   // pull(...ids: string[]): Promise<ICueCommandBundle[]>
 }

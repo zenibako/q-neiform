@@ -2,6 +2,7 @@ import { Menu, MenuItem } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscBridgeApp } from "../../domain/abstractions/i-bridge"
+import OSC from "osc-js"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -54,11 +55,17 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
               { type: "text", name: "password", label: "Password" }
             ]
           })
-
-          return passModalResponse?.password ?? ""
+          if (!passModalResponse?.password?.length) {
+            reject("Password not provided")
+            return
+          }
+          return { address: `/connect/${passModalResponse.password}` }
         },
-        handleReply: (reply: object) => {
+        handleReply: (reply: OSC.Message) => {
           Beat.log(`Received reply ${JSON.stringify(reply)}`)
+          if (reply.address.startsWith("/reply/connect")) {
+            this.window?.runJS(`document.querySelector("#status").textContent = "Connected!"`)
+          }
           resolve(reply)
         },
         handleError: (error: object) => {

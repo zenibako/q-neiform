@@ -1,4 +1,4 @@
-<span>Connecting to localhost:8080...</span>
+<span id="status"></span>
 <script type="text/javascript" src="lib/osc.min.js"></script>
 <script type="text/javascript">
   const delay = 30000
@@ -7,23 +7,21 @@
   const ws = new OSC({
     plugin: new OSC.WebsocketClientPlugin({host, port})
   })
-  Beat.log("Opening WS at localhost:8080")
+  const connectMessage = `Connecting to bridge at ${host}:${port}...`
+  document.querySelector("#status").textContent = connectMessage
+  Beat.log(connectMessage)
   ws.open()
   Beat.log("Opened.")
   Beat.callAndWait("Beat.custom.handleOpen()")
-    .then((password) => {
-      ws.on("", (reply) => {
+    .then(({ address }) => {
+      ws.on("*", (reply) => {
         Beat.call((arg) => Beat.custom.handleReply(arg), reply)
       })
       ws.on("error", (error) => {
         Beat.call((arg) => Beat.custom.handleError(arg), error)
       })
-      ws.send(new OSC.Message(`/connect/${password}`))
-      Beat.log(`Sent connect message. Waiting ${delay / 1000} seconds...`)
-      setTimeout(() => {
-        const error = `Timed out after ${delay / 1000} seconds.`
-        Beat.call((arg) => Beat.custom.handleError(arg), error)
-      }, delay)
+      ws.send(new OSC.Message(address))
+      Beat.log(`Sent message to ${address}`)
     }, (error) => {
       Beat.call((arg) => Beat.custom.handleError(arg), error)
     })
