@@ -1,7 +1,7 @@
 import { Menu, MenuItem } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
-import { IOscBridgeApp } from "../../domain/abstractions/i-bridge"
+import { IOscBridgeClient } from "../../domain/abstractions/i-bridge"
 import OSC from "osc-js"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
@@ -9,7 +9,7 @@ export enum Mode { DEVELOPMENT, PRODUCTION }
 const WS_DEFAULT_ADDRESS = "localhost"
 const WS_DEFAULT_PORT = "8080"
 
-export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
+export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
   private window?: Beat.Window
 
   constructor(private mode: Mode) {
@@ -22,10 +22,10 @@ export default class BeatApp implements IScriptApp, IOscBridgeApp, ILogger {
     Beat.log(message)
   }
 
-  async connectToWebSocket(): Promise<unknown> {
+  async connectToWebSocketServer(): Promise<unknown> {
     const modalResponse = Beat.modal({
-      title: "Connect to q-neiform OSC bridge.",
-      info: "q-neiform uses a Web Socket server to relay OSC messages to the cue server. Please set the values below or leave the defaults, then click OK to connect.",
+      title: "Connect to QLab.",
+      info: "You must first run \"q-neiform bridge serve\" in Terminal to relay OSC messages between the cue server. Once you have done that, fill out the below (or leave blank for defaults), then click OK to connect.",
       items: [
         { type: "text", name: "address", label: "Address", placeholder: `${WS_DEFAULT_ADDRESS}` },
         { type: "text", name: "port", label: "Port", placeholder: `${WS_DEFAULT_PORT}` },

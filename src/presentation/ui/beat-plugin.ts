@@ -4,7 +4,6 @@ import { Scripts } from "../../data/repositories/scripts";
 import BeatApp, { Mode } from "../../data/sources/beat-app"
 import QLabApp from "../../data/sources/qlab-app";
 import { Menu, MenuItem } from "../../domain/entities/menu";
-import ConnectToBridge from "../../domain/use-cases/init-apps";
 import PullCuesIntoScript from "../../domain/use-cases/pull-cues";
 import PushCuesFromScript from "../../domain/use-cases/push-cues";
 
@@ -23,7 +22,7 @@ export default class BeatPlugin {
     const menu = new Menu("QLab", [pushMenuItem, pullMenuItem])
 
     try {
-      await new ConnectToBridge(menus).execute(menu)
+      await beat.connectToWebSocketServer()
     } catch (e) {
       beat.log("Error while connecting to bridge: " + ((e as Error).message ?? JSON.stringify(e)))
       Beat.end()

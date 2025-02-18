@@ -20,16 +20,15 @@ export default class Cues {
   // private triggerColorMap: Record<string, string> = {};
   // private parentChildIdMap: Record<string, string[]> = {};
 
-  constructor(private cueApp: ICueApp, private logger: ILogger) {
-  }
+  constructor(private cueApp: ICueApp, private logger: ILogger) { }
 
   async initialize() {
     this.logger.log("Initializing cues...")
     try {
-      await this.cueApp.connect()
-      this.logger.log("Initialized")
+      this.logger.log("Initialized! Ready for cues.")
     } catch (e) {
       this.logger.log("Error while initializing: " + ((e as Error).message ?? e))
+      throw e
     }
   }
 

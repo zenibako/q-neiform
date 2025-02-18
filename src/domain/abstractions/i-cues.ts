@@ -1,6 +1,5 @@
 export interface ICueApp {
   name: string
-  connect(): Promise<unknown>
   // push(...bundles: ICueCommandBundle[]): Promise<string[]>
   // pull(...ids: string[]): Promise<ICueCommandBundle[]>
 }

@@ -1,7 +1,6 @@
 import { Args, Command, Flags } from '@oclif/core'
 import QLabApp from '../../../data/sources/qlab-app'
 import Cues from '../../../data/repositories/cues'
-import BridgeApps from '../../../domain/use-cases/bridge-apps'
 
 export default class BridgeServe extends Command {
   static override args = {
@@ -23,10 +22,16 @@ export default class BridgeServe extends Command {
 
   public async run(): Promise<void> {
     const { args, flags } = await this.parse(BridgeServe)
-    const qlab = new QLabApp(this, flags.host, flags.port)
+    const qlab = new QLabApp(this)
     const cues = new Cues(qlab, this)
 
-    await new BridgeApps(cues).execute()
+    try {
+      await qlab.bridgeToUdpServer(flags.host, flags.port)
+      this.log("Connected!")
+    } catch (e) {
+      this.log("Error while initializing: " + ((e as Error).message ?? e))
+      throw e
+    }
 
     if (args.file && flags.force) {
       this.log(`you input --force and --file: ${args.file}`)

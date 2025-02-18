@@ -4,23 +4,23 @@ import OscBundle from "../transfer-objects/osc-bundle";
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
+import { IOscBridgeServer } from "../../domain/abstractions/i-bridge";
 
 const DELAY_MS = 30000
 
-export default class QLabApp implements ICueApp {
+export default class QLabApp implements ICueApp, IOscBridgeServer {
   public readonly name = "QLab"
 
   public osc?: OSC
 
-  constructor(private logger: ILogger, private host: string = "localhost", private port: number = 53000) { }
+  constructor(private logger: ILogger) { }
 
-  connect() {
-    const { port, host } = this
+  bridgeToUdpServer(host: string = "localhost", port: number = 53000) {
     this.osc = new OSC({
       plugin: new OSC.BridgePlugin({
         udpClient: { port, host },      // Target QLab's port
         udpServer: { port: port + 1 },  // This bridge's port
-        receiver: 'udp'
+        receiver: "udp"
       })
     })
     return new Promise((resolve, reject) => {
