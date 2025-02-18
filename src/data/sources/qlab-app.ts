@@ -6,7 +6,7 @@ import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
 import { IOscBridgeServer } from "../../domain/abstractions/i-bridge";
 
-const DELAY_MS = 30000
+const DELAY_MS = 60000
 
 export default class QLabApp implements ICueApp, IOscBridgeServer {
   public readonly name = "QLab"
