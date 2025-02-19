@@ -4,6 +4,5 @@ export interface IOscClient {
 
 export interface IOscServer {
   bridge(host: string, port: number): Promise<string>
-  getConnectAddress(): string
-  getReplyAddress(originalAddress: string): string
+  dict: Record<string, { address: string }>
 }

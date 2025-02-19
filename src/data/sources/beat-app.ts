@@ -44,7 +44,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       ui.replace(WS_DEFAULT_PORT, port)
     }
 
-    const connectAddress = oscServer.getConnectAddress()
+    const connectAddress = oscServer.dict.connect?.address
     return new Promise((resolve, reject) => {
       Beat.custom = {
         handleOpen: () => {
@@ -64,7 +64,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         handleReply: (arg) => {
           const reply = arg as OSC.Message
           Beat.log(`Received reply ${JSON.stringify(reply)}`)
-          if (reply.address.startsWith(oscServer.getReplyAddress(connectAddress))) {
+          if (connectAddress && reply.address.includes(connectAddress)) {
             this.window?.runJS(`document.querySelector("#status").textContent = "Connected!"`)
           }
           resolve("Received reply")

@@ -13,12 +13,9 @@ export default class QLabApp implements ICueApp, IOscServer {
 
   constructor(private logger: ILogger) { }
 
-  getConnectAddress() {
-    return `/connect`
-  }
-
-  getReplyAddress(originalAddress: string = "*") {
-    return `/reply/${originalAddress}`
+  public readonly dict = {
+    connect: { address: "/connect" },
+    reply: { address: "/reply" }
   }
 
   bridge(host: string = "localhost", port: number = 53000): Promise<string> {
@@ -29,19 +26,25 @@ export default class QLabApp implements ICueApp, IOscServer {
         receiver: "udp"
       })
     })
+
+    this.osc.on("open", () => {
+      this.logger.log(`Opened WebSocket bridge port on localhost:8080. Ready to accept OSC messages.`)
+    })
+
     return new Promise((resolve, reject) => {
       if (!this.osc) {
         reject('No OSC server set')
         return
       }
-
-      this.osc.on("open", () => {
-        this.logger.log(`Opened WebSocket bridge port on localhost:8080. Ready to accept OSC messages.`)
-      })
-      this.osc.on(this.getReplyAddress(), ({ address, args }: OSC.Message) => {
-        const relayedMessage = new OSC.Message(address, ...args)
-        this.osc?.send(relayedMessage, { receiver: "ws" })
-        resolve("Successfully connected.")
+      this.osc.on("*", ({ address, args }: OSC.Message) => {
+        if (address.includes(this.dict.reply.address)) {
+          this.logger.log(`Received reply with address ${address}${args?.length ? " and args: " + args : ""}.`)
+          if (address.includes(this.dict.connect.address)) {
+            resolve("Successfully connected.")
+          }
+        } else {
+          this.logger.log(`Received message with address ${address}${args?.length ? " and args: " + args : ""}.`)
+        }
       })
       this.osc.on("error", (error: unknown) => {
         reject(error)
