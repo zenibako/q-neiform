@@ -4,25 +4,27 @@
   const delay = 30000
   const host = "localhost"
   const port = 8080
-  const ws = new OSC({
+  const osc = new OSC({
     plugin: new OSC.WebsocketClientPlugin({host, port})
   })
   const connectMessage = `Connecting to bridge at ${host}:${port}...`
   document.querySelector("#status").textContent = connectMessage
   Beat.log(connectMessage)
-  ws.open()
-  Beat.log("Opened.")
-  Beat.callAndWait("Beat.custom.handleOpen()")
-    .then(({ address }) => {
-      ws.on("*", (reply) => {
-        Beat.call((arg) => Beat.custom.handleReply(arg), reply)
+  osc.on("error", (error) => {
+    Beat.call((error, status) => Beat.custom.handleError(error, status), [error, osc.status()])
+  })
+  osc.on("open", () => {
+    Beat.log("Opened.")
+    Beat.callAndWait("Beat.custom.handleOpen()")
+      .then(({address}) => {
+        osc.on("*", (reply) => {
+          Beat.call((arg) => Beat.custom.handleReply(arg), reply)
+        })
+        osc.send(new OSC.Message(address))
+        Beat.log(`Sent message to ${address}`)
+      }, (error) => {
+        Beat.call((error, status) => Beat.custom.handleError(error, status), [error, osc.status()])
       })
-      ws.on("error", (error) => {
-        Beat.call((arg) => Beat.custom.handleError(arg), error)
-      })
-      ws.send(new OSC.Message(address))
-      Beat.log(`Sent message to ${address}`)
-    }, (error) => {
-      Beat.call((arg) => Beat.custom.handleError(arg), error)
-    })
+  })
+  osc.open()
 </script>

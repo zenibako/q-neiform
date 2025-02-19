@@ -123,12 +123,12 @@ declare namespace Beat {
     detachFromDocumentWindow() // — detach from document window
   }
 
-  type CustomArg = OSC
-  let custom: Record<string, (arg: CustomArg) => void>
+  let custom: Record<string, (arg1: unknown | unknown[]) => void>
   function call(customFunction: (arg: object) => void, arg: object)
 
   function assetAsString(path: string): string
   function htmlWindow(ui: UI, height: number, width: number, callback: () => void): Window
+  function alert(alertTitle: string, informativeText: string)
   function confirm(title: string, description: string): boolean
   function prompt(title: string, description: string, placeholder: string): string
   function modal(opts: {

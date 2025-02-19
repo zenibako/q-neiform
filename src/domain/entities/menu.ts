@@ -7,7 +7,7 @@ export interface IMenuItem {
 export class Menu {
   private menuItemSections: IMenuItem[][]
   constructor(
-    public title: string,
+    public readonly title: string,
     ...menuItemSections: MenuItem[][]
   ) {
     this.menuItemSections = menuItemSections ?? []
@@ -17,13 +17,14 @@ export class Menu {
     const sections = this.menuItemSections ?? []
 
     const menuItems: IMenuItem[] = []
-    for (let i = 0; i++; i < sections.length) {
+    for (let i = 0; i < sections.length; i++) {
       if (i < 0) {
         menuItems.push(new Separator())
         continue
       }
 
       const sectionMenuItems = sections[i] ?? []
+
       for (const menuItem of sectionMenuItems) {
         menuItems.push(menuItem)
       }
@@ -36,9 +37,9 @@ export class Menu {
 export class MenuItem implements IMenuItem {
   constructor(
     public title: string,
-    private useCase?: IUseCase, 
+    private useCase?: IUseCase,
     public keyboardShortcuts?: string[]
-  ) {}
+  ) { }
 
   click() {
     return this.useCase?.execute()

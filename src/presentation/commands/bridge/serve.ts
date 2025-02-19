@@ -26,10 +26,10 @@ export default class BridgeServe extends Command {
     const cues = new Cues(qlab, this)
 
     try {
-      await qlab.bridgeToUdpServer(flags.host, flags.port)
-      this.log("Connected!")
+      const connectionMessage = await qlab.bridge(flags.host, flags.port)
+      this.log(connectionMessage)
     } catch (e) {
-      this.log("Error while initializing: " + ((e as Error).message ?? e))
+      this.log("Error: " + ((e as Error).message ?? e))
       throw e
     }
 

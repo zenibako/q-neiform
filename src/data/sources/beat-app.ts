@@ -1,7 +1,7 @@
 import { Menu, MenuItem } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
-import { IOscBridgeClient } from "../../domain/abstractions/i-bridge"
+import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
@@ -9,7 +9,7 @@ export enum Mode { DEVELOPMENT, PRODUCTION }
 const WS_DEFAULT_ADDRESS = "localhost"
 const WS_DEFAULT_PORT = "8080"
 
-export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
+export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   private window?: Beat.Window
 
   constructor(private mode: Mode) {
@@ -22,7 +22,7 @@ export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
     Beat.log(message)
   }
 
-  async connectToWebSocketServer(): Promise<unknown> {
+  async connect(oscServer: IOscServer): Promise<string> {
     const modalResponse = Beat.modal({
       title: "Connect to QLab.",
       info: "You must first run \"q-neiform bridge serve\" in Terminal to relay OSC messages between the cue server. Once you have done that, fill out the below (or leave blank for defaults), then click OK to connect.",
@@ -32,8 +32,7 @@ export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
       ]
     })
     if (!modalResponse) {
-      Beat.end()
-      return
+      throw new Error("Modal cancelled.")
     }
 
     const { address, port } = modalResponse
@@ -45,6 +44,7 @@ export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
       ui.replace(WS_DEFAULT_PORT, port)
     }
 
+    const connectAddress = oscServer.getConnectAddress()
     return new Promise((resolve, reject) => {
       Beat.custom = {
         handleOpen: () => {
@@ -59,27 +59,57 @@ export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
             reject("Password not provided")
             return
           }
-          return { address: `/connect/${passModalResponse.password}` }
+          return { address: `${connectAddress}/${passModalResponse.password}` }
         },
-        handleReply: (reply: OSC.Message) => {
+        handleReply: (arg) => {
+          const reply = arg as OSC.Message
           Beat.log(`Received reply ${JSON.stringify(reply)}`)
-          if (reply.address.startsWith("/reply/connect")) {
+          if (reply.address.startsWith(oscServer.getReplyAddress(connectAddress))) {
             this.window?.runJS(`document.querySelector("#status").textContent = "Connected!"`)
           }
-          resolve(reply)
+          resolve("Received reply")
         },
-        handleError: (error: object) => {
+        handleError: (arg) => {
+          const [ error, status ] = arg as [ string, number ]
           Beat.log(`Received error ${JSON.stringify(error)}`)
+          const { title, message } = this.getAlertInfo(status)
+          Beat.alert(title, message)
           this.window?.close()
-          reject(error)
+          reject(title)
         }
       }
 
-      this.window = Beat.htmlWindow(ui, 250, 50, () => {
-        Beat.log("Window closed. Ending plugin.")
-        Beat.end()
+      this.window = Beat.htmlWindow(ui, 300, 50, () => {
+        Beat.log("Window closed. Disconnecting.")
+        this.disconnect()
       })
+      this.window.gangWithDocumentWindow()
     })
+  }
+
+  private getAlertInfo(status: number) {
+    switch (status) {
+      case OSC.STATUS.IS_NOT_INITIALIZED:
+        return {
+          title: "Initialization Error",
+          message: "Try again. Is \"q-neiform bridge serve\" running?"
+        }
+      case OSC.STATUS.IS_CONNECTING:
+        return {
+          title: "Connection Error",
+          message: "Try again. Is \"q-neiform bridge serve\" running?"
+        }
+      default:
+        return {
+          title: "Unknown Error",
+          message: "Closing plugin. Reopen and try again."
+        }
+    }
+  }
+
+  disconnect() {
+    this.window?.runJS(`osc.close()`)
+    Beat.end()
   }
 
   pullOutline() {
@@ -87,13 +117,19 @@ export default class BeatApp implements IScriptApp, IOscBridgeClient, ILogger {
   }
 
   mountMenu(menu: Menu) {
-    Beat.menu(menu.title, menu.getMenuItems().map((item) => {
-      if (item?.title) {
+    const menuItems = menu.getMenuItems().map((item) => {
+      Beat.log(JSON.stringify(item))
+      if (!item?.title) {
         return Beat.separatorMenuItem()
       }
 
       const { title, keyboardShortcuts, click } = item as MenuItem
-      return Beat.menuItem(title, keyboardShortcuts ?? [], click)
-    }))
+      return Beat.menuItem(title, keyboardShortcuts ?? [], () => click())
+    })
+
+    const beatMenu = Beat.menu(menu.title, menuItems)
+    beatMenu.addItem(Beat.separatorMenuItem())
+    beatMenu.addItem(Beat.menuItem("Disconnect", ["cmd", "q"], () => this.disconnect()))
+    Beat.log("Mounted.")
   }
 }

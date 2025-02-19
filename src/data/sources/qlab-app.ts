@@ -4,18 +4,24 @@ import OscBundle from "../transfer-objects/osc-bundle";
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
-import { IOscBridgeServer } from "../../domain/abstractions/i-bridge";
+import { IOscServer } from "../../domain/abstractions/i-osc";
 
-const DELAY_MS = 60000
-
-export default class QLabApp implements ICueApp, IOscBridgeServer {
+export default class QLabApp implements ICueApp, IOscServer {
   public readonly name = "QLab"
 
   public osc?: OSC
 
   constructor(private logger: ILogger) { }
 
-  bridgeToUdpServer(host: string = "localhost", port: number = 53000) {
+  getConnectAddress() {
+    return `/connect`
+  }
+
+  getReplyAddress(originalAddress: string = "*") {
+    return `/reply/${originalAddress}`
+  }
+
+  bridge(host: string = "localhost", port: number = 53000): Promise<string> {
     this.osc = new OSC({
       plugin: new OSC.BridgePlugin({
         udpClient: { port, host },      // Target QLab's port
@@ -29,7 +35,10 @@ export default class QLabApp implements ICueApp, IOscBridgeServer {
         return
       }
 
-      this.osc.on("/reply/*", ({ address, args }: OSC.Message) => {
+      this.osc.on("open", () => {
+        this.logger.log(`Opened WebSocket bridge port on localhost:8080. Ready to accept OSC messages.`)
+      })
+      this.osc.on(this.getReplyAddress(), ({ address, args }: OSC.Message) => {
         const relayedMessage = new OSC.Message(address, ...args)
         this.osc?.send(relayedMessage, { receiver: "ws" })
         resolve("Successfully connected.")
@@ -38,13 +47,6 @@ export default class QLabApp implements ICueApp, IOscBridgeServer {
         reject(error)
       })
       this.osc.open()
-      this.logger.log(`Opened bridge port.`)
-      try {
-        this.logger.log(`Waiting for ${DELAY_MS / 1000} seconds for first relay...`)
-        setTimeout(() => reject(`Timed out after ${DELAY_MS / 1000} seconds.`), DELAY_MS)
-      } catch (e) {
-        reject(e)
-      }
     })
   }
 
