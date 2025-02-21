@@ -2,6 +2,8 @@ import { IUseCase } from "../abstractions/i-use-cases"
 
 export interface IMenuItem {
   title: string | null
+  useCase?: IUseCase
+  keyboardShortcuts?: string[]
 }
 
 export class Menu {
@@ -37,13 +39,9 @@ export class Menu {
 export class MenuItem implements IMenuItem {
   constructor(
     public title: string,
-    private useCase?: IUseCase,
-    public keyboardShortcuts?: string[]
+    public readonly useCase?: IUseCase,
+    public readonly keyboardShortcuts?: string[]
   ) { }
-
-  click() {
-    return this.useCase?.execute()
-  }
 }
 
 class Separator implements IMenuItem {

@@ -123,6 +123,8 @@ declare namespace Beat {
     detachFromDocumentWindow() // — detach from document window
   }
 
+  let currentLine: Line
+
   let custom: Record<string, (arg1: unknown | unknown[]) => void>
   function call(customFunction: (arg: object) => void, arg: object)
 

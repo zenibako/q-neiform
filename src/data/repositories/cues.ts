@@ -1,5 +1,7 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
+import { IOscClient } from "../../domain/abstractions/i-osc";
+import { Cue } from "../../domain/entities/cue";
 import Script from "../../domain/entities/script";
 // import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
@@ -20,7 +22,7 @@ export default class Cues {
   // private triggerColorMap: Record<string, string> = {};
   // private parentChildIdMap: Record<string, string[]> = {};
 
-  constructor(private cueApp: ICueApp, private logger: ILogger) { }
+  constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
 
   async initialize() {
     this.logger.log("Initializing cues...")
@@ -42,10 +44,10 @@ export default class Cues {
     return []
   }
 
-  async pushUpdates(script: Script) {
-    const cues = script.pullCues()
+  async pushUpdates(...cues: Cue[]) {
+    const pushedCues = cues.map(async (cue) => this.oscClient.send(cue))
     //this.cueApp.push(cues)
-    return cues
+    return pushedCues
   }
 
   /*

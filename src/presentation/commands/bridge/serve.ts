@@ -1,6 +1,6 @@
 import { Args, Command, Flags } from '@oclif/core'
 import QLabApp from '../../../data/sources/qlab-app'
-import Cues from '../../../data/repositories/cues'
+// import Cues from '../../../data/repositories/cues'
 
 export default class BridgeServe extends Command {
   static override args = {
@@ -23,7 +23,7 @@ export default class BridgeServe extends Command {
   public async run(): Promise<void> {
     const { args, flags } = await this.parse(BridgeServe)
     const qlab = new QLabApp(this)
-    const cues = new Cues(qlab, this)
+    // const cues = new Cues(this, qlab, this)
 
     try {
       const connectionMessage = await qlab.bridge(flags.host, flags.port)

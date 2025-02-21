@@ -1,5 +1,8 @@
+import { Cue } from "../entities/cue"
+
 export interface IOscClient {
   connect(oscServer: IOscServer): Promise<string>
+  send(cue: Cue): Promise<Cue>
 }
 
 export interface IOscServer {
