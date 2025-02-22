@@ -12,7 +12,7 @@ const qlab = new QLabWorkspace(beat)
 export default class BeatPlugin {
   async initialize() {
     beat.log("Starting plugin...")
-    const scripts = new Scripts(beat)
+    const scripts = new Scripts(beat, beat)
     const cues = new Cues(qlab, beat, beat)
 
     const menu = new Menu(qlab.name, [

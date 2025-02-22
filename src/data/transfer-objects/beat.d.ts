@@ -28,7 +28,7 @@ declare namespace Beat {
     note: boolean // the line is a note (wrapped in [[]]), true/false
     clone(): Line // a copy of the line, detached from the parser
     uuidString(): string // returns the unique identifier fo this line, which can be matched against JSON data, for example
-    forSerialization(): JSON // JSON data for the line
+    forSerialization(): Record<string, string | number | Beat.Range> // JSON data for the line
     setCustomData(key: string, value: string) // custom data for a key
     getCustomData(key: string): string // custom data for a key
   }

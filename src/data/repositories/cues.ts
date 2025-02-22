@@ -2,7 +2,7 @@ import { ICueApp } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
 import { IOscClient } from "../../domain/abstractions/i-osc";
 import { Cue, TriggerCue } from "../../domain/entities/cue";
-import { Script } from "../../domain/entities/script";
+import { Line, LineType } from "./scripts";
 // import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
 // import StageToken, { StageTokenType } from "../../domain/entities/StageToken";
@@ -44,37 +44,55 @@ export default class Cues {
     return []
   }
 
-  getFromLines(lines: Beat.Line[]) {
-    let currentTriggerCue = null
-    const cues: Cue[] = []
-    for (const line of lines) {
-      let text = line.cleanedString()
+  getFromLines(lines: Line[]) {
+    let triggerText = "", triggerCharacterName, triggerCueId, triggerLines: Line[] = []
+    this.logger.log(`lines: ${JSON.stringify(lines, null, 1)}`)
 
-      // If there's no current trigger cue, set one up and move on
-      if (currentTriggerCue === null) {
-        if (line.characterName()) {
-          text += ": "
-        }
-        currentTriggerCue = new TriggerCue(text, line.getCustomData("cue_id"))
-        currentTriggerCue.lines.push(line)
-        continue
+    const clear = () => {
+      triggerText = ""
+      triggerCharacterName = null
+      triggerCueId = null
+      triggerLines = []
+    }
+
+    clear()
+    const cues: Cue[] = []
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!
+      const lineCharacterName = line.getType() == LineType.CHARACTER ? line.text : null
+      if (lineCharacterName && lineCharacterName !== triggerCharacterName) {
+        const triggerCue = new TriggerCue(triggerText, triggerCueId)
+        triggerCue.lines = [...triggerLines]
+        cues.push(triggerCue)
+        clear()
       }
 
+      triggerCharacterName = lineCharacterName ?? triggerCharacterName
+      triggerCueId = line.cueId
+      triggerText += `${line.text + lineCharacterName ? ": " : ""}`
+      triggerLines.push(line)
+      this.logger.log(`${triggerText}`)
 
+      /*
+      // If there's no current trigger cue, set one up and move on
+      if (currentTriggerCue === null) {
+        setTriggerCue(line)
+        continue
+      }
+  
+  
       // A new character means a break in the dialogue and the end of the cue.
       if (line.characterName()) {
         cues.push(currentTriggerCue)
-        if (line.characterName()) {
-          text += ": "
-        }
-        currentTriggerCue = new TriggerCue(text, line.getCustomData("cue_id"))
-        currentTriggerCue.lines.push(line)
+        setTriggerCue(line)
         continue
       }
-
+  
       // Otherwise, just append the text.
-      currentTriggerCue.name += text
+      currentTriggerCue.name += line.cleanedString()
       currentTriggerCue.lines.push(line)
+    }
+    */
     }
 
     return cues

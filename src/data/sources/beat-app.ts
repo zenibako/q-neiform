@@ -132,10 +132,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
       const expectedReplyCount = cue.actionQueue.filter(({ address }) => {
         const dictKey = address.substring(address.lastIndexOf("/") + 1)
-        Beat.log(`dictKey: ${dictKey}`)
         return this.oscServer?.dict[dictKey]?.replyDataExample
-      })
-        .length
+      }).length
 
       const replyStatuses: string[] = []
       Beat.custom.handleReply = (arg) => {
@@ -175,13 +173,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
       const timeoutDelay = 5000
       this.updateStatusDisplay(`Waiting ${timeoutDelay / 1000} seconds for replies.`)
-      setTimeout(() => {
-        if (replyStatuses.length) {
-          return
-        }
-        this.updateStatusDisplay("All messages sent!")
-        resolve(cue)
-      }, timeoutDelay)
     })
   }
 
@@ -194,9 +185,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.end()
   }
 
-  setLineData(line: Beat.Line, key: string, value: string = "") {
+  setLineData(line: Beat.Line, key: string, value: string | null) {
     Beat.log(`Set custom data: ${key} = ${value}`)
-    line.setCustomData(key, value)
+    line.setCustomData(key, value ?? "")
     return line
   }
 
@@ -221,9 +212,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getCurrentLine() {
-    const line = Beat.currentLine
-    Beat.log(`${JSON.stringify(line.forSerialization())}`)
-    return line
+    return Beat.currentLine
   }
 
   getSelectedLines(): Beat.Line[] {
@@ -231,10 +220,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getLineFromIndex(index: number): Beat.Line {
-    Beat.log(`get line at index ${index}`)
-    const line = Beat.currentParser.lineAtIndex(index)
-    Beat.log(`line: ${JSON.stringify(line.forSerialization())}`)
-    return line
+    return Beat.currentParser.lineAtIndex(index)
   }
 
   private getAlertInfo(status: number) {
