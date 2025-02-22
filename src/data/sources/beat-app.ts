@@ -1,4 +1,4 @@
-import { IMenuItem, Menu, MenuItem } from "../../domain/entities/menu"
+import { IMenuItem, Menu } from "../../domain/entities/menu"
 import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
@@ -25,8 +25,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       }
 
       // Beat.log(Beat.currentLine.characterName())
-      Beat.log(`Loc: ${location} / Len: ${length}`)
+      Beat.log(`Selection: loc = ${location} / len = ${length}`)
       const cueId = Beat.currentLine.getCustomData("cue_id")
+      this.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
     })
   }
 
@@ -67,17 +68,29 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
               { type: "text", name: "password", label: "Password" }
             ]
           })
-          if (!passModalResponse?.password?.length) {
+          if (!passModalResponse) {
             reject("Password not provided")
             return
           }
-          return { address: `${connectAddress}/${passModalResponse.password}` }
+          return { address: connectAddress, password: passModalResponse.password }
         },
         handleReply: (arg) => {
           const reply = arg as OSC.Message
-          Beat.log(`Received reply ${reply}`)
-          if (connectAddress && reply.address.includes(connectAddress)) {
-            this.window?.runJS(`document.querySelector("#status").textContent = "Connected!"`)
+          Beat.log(`Received reply: ${reply}`)
+          const { address, args } = reply
+          if (connectAddress && address.includes(connectAddress)) {
+            if (!args?.length) {
+              reject("No args returned")
+            }
+            const [responseBodyString] = args
+            const { workspace_id, data } = JSON.parse(responseBodyString as string)
+            const splitData = (data as string).split(":")
+            if (splitData.length < 2) {
+              Beat.alert("Access Error", "Password was incorrect or did not provide permissions. Please try again.")
+              reject("Wrong password")
+            }
+            oscServer.id = workspace_id
+            this.updateStatusDisplay("Connected!")
             this.oscServer = oscServer
           }
           resolve("Received reply")
@@ -110,23 +123,81 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         reject("No OSC server connected.")
       }
 
+      const messages = cue.actionQueue.map(({ address, args }) =>
+        `new OSC.Message(${[
+          `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
+          ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
+        ].join(",")})`
+      )
+
+      const expectedReplyCount = cue.actionQueue.filter(({ address }) => {
+        const dictKey = address.substring(address.lastIndexOf("/") + 1)
+        Beat.log(`dictKey: ${dictKey}`)
+        return this.oscServer?.dict[dictKey]?.replyDataExample
+      })
+        .length
+
+      const replyStatuses: string[] = []
       Beat.custom.handleReply = (arg) => {
-        const reply = arg as OSC.Bundle
-        Beat.log(`Received reply: ${JSON.stringify(reply.bundleElements)}`)
+        const reply = arg as OSC.Message
+        const [responseBodyString] = reply.args
+        const { status, address, data } = JSON.parse(responseBodyString as string)
+        replyStatuses.push(status)
+        Beat.log(`Received reply: address = ${address}, status = ${status}, data = ${data}`)
+
+        if (status === "ok" && address.endsWith(this.oscServer?.dict.new.address)) {
+          Beat.log(`Setting cue ID: ${data}`)
+          cue.id = data
+        }
+
+        if (expectedReplyCount > 0 && replyStatuses.length < expectedReplyCount) {
+          Beat.log(`Still waiting for ${expectedReplyCount - 1} replies...`)
+          return
+        }
+
         cue.actionQueue = []
+        if (replyStatuses.includes("denied")) {
+          Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
+          reject("Access revoked. Need to reopen plugin.")
+        }
+        if (replyStatuses.includes("error")) {
+          Beat.alert("Send Error", "Some or all of the messages had errors. Check logs for details.")
+        }
+
+        this.updateStatusDisplay("All messages sent!")
         resolve(cue)
       }
 
-      const messages = cue.actionQueue.map(action => `new OSC.Message("${[action.address, ...action.args].join(`","`)}")`)
-      const sendJS = `osc.send(new OSC.Bundle([${messages.join(",")}])`
+      const sendJS = `osc.send(new OSC.Bundle([${messages.join(",")}]))`
       Beat.log(sendJS)
+      this.updateStatusDisplay(`Sending ${messages.length} messages...`)
       this.window?.runJS(sendJS)
+
+      const timeoutDelay = 5000
+      this.updateStatusDisplay(`Waiting ${timeoutDelay / 1000} seconds for replies.`)
+      setTimeout(() => {
+        if (replyStatuses.length) {
+          return
+        }
+        this.updateStatusDisplay("All messages sent!")
+        resolve(cue)
+      }, timeoutDelay)
     })
+  }
+
+  updateStatusDisplay(text: string) {
+    this.window?.runJS(`document.querySelector("#status").textContent = "${text}"`)
   }
 
   disconnect() {
     this.window?.runJS(`osc.close()`)
     Beat.end()
+  }
+
+  setLineData(line: Beat.Line, key: string, value: string = "") {
+    Beat.log(`Set custom data: ${key} = ${value}`)
+    line.setCustomData(key, value)
+    return line
   }
 
   pullOutline() {
@@ -150,7 +221,20 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getCurrentLine() {
-    return Beat.currentLine
+    const line = Beat.currentLine
+    Beat.log(`${JSON.stringify(line.forSerialization())}`)
+    return line
+  }
+
+  getSelectedLines(): Beat.Line[] {
+    return Beat.currentParser.linesInRange(Beat.selectedRange())
+  }
+
+  getLineFromIndex(index: number): Beat.Line {
+    Beat.log(`get line at index ${index}`)
+    const line = Beat.currentParser.lineAtIndex(index)
+    Beat.log(`line: ${JSON.stringify(line.forSerialization())}`)
+    return line
   }
 
   private getAlertInfo(status: number) {

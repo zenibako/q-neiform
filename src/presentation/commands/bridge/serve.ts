@@ -1,5 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core'
-import QLabApp from '../../../data/sources/qlab-app'
+import { QLabWorkspace } from '../../../data/sources/qlab-app'
 // import Cues from '../../../data/repositories/cues'
 
 export default class BridgeServe extends Command {
@@ -22,7 +22,7 @@ export default class BridgeServe extends Command {
 
   public async run(): Promise<void> {
     const { args, flags } = await this.parse(BridgeServe)
-    const qlab = new QLabApp(this)
+    const qlab = new QLabWorkspace(this)
     // const cues = new Cues(this, qlab, this)
 
     try {

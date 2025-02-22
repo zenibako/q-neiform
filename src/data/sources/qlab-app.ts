@@ -4,18 +4,55 @@ import OscBundle from "../transfer-objects/osc-bundle";
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
-import { IOscServer } from "../../domain/abstractions/i-osc";
+import { IOscServer, IOscDictionary } from "../../domain/abstractions/i-osc";
 
-export default class QLabApp implements ICueApp, IOscServer {
+export type CueType =
+  "audio" |
+  "mic" |
+  "video" |
+  "camera" |
+  "text" |
+  "light" |
+  "fade" |
+  "network" |
+  "midi" |
+  "midi file" |
+  "timecode" |
+  "group" |
+  "start" |
+  "stop" |
+  "pause" |
+  "load" |
+  "reset" |
+  "devamp" |
+  "goto" |
+  "target" |
+  "arm" |
+  "disarm" |
+  "wait" |
+  "memo" |
+  "script" |
+  "list" |
+  "cuelist" |
+  "cue list" |
+  "cart" |
+  "cuecart" |
+  "cue cart"
+
+export class QLabWorkspace implements ICueApp, IOscServer {
   public readonly name = "QLab"
+
+  public id?: string
 
   public osc?: OSC
 
   constructor(private logger: ILogger) { }
 
-  public readonly dict = {
+  public readonly dict: IOscDictionary = {
     connect: { address: "/connect" },
-    reply: { address: "/reply" }
+    reply: { address: "/reply" },
+    workspace: { address: "/workspace" },
+    new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" }
   }
 
   bridge(host: string = "localhost", port: number = 53000): Promise<string> {
@@ -51,6 +88,10 @@ export default class QLabApp implements ICueApp, IOscServer {
       })
       this.osc.open()
     })
+  }
+
+  getTargetAddress(address: string): string {
+    return `${this.dict.workspace.address}/${this.id}` + address
   }
 
   // private queue: OscBundle[] = []

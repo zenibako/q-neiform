@@ -1,8 +1,8 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
 import { IOscClient } from "../../domain/abstractions/i-osc";
-import { Cue } from "../../domain/entities/cue";
-import Script from "../../domain/entities/script";
+import { Cue, TriggerCue } from "../../domain/entities/cue";
+import { Script } from "../../domain/entities/script";
 // import Cue from "../../domain/entities/cue";
 // import Stage from "../../domain/entities/Stage";
 // import StageToken, { StageTokenType } from "../../domain/entities/StageToken";
@@ -39,15 +39,49 @@ export default class Cues {
   }
 
   async getCueList(): Promise<object[]> {
-  //async getCueList(): Promise<Cue[]> {
+    //async getCueList(): Promise<Cue[]> {
     // return this.cueApp.getCueList()
     return []
   }
 
+  getFromLines(lines: Beat.Line[]) {
+    let currentTriggerCue = null
+    const cues: Cue[] = []
+    for (const line of lines) {
+      let text = line.cleanedString()
+
+      // If there's no current trigger cue, set one up and move on
+      if (currentTriggerCue === null) {
+        if (line.characterName()) {
+          text += ": "
+        }
+        currentTriggerCue = new TriggerCue(text, line.getCustomData("cue_id"))
+        currentTriggerCue.lines.push(line)
+        continue
+      }
+
+
+      // A new character means a break in the dialogue and the end of the cue.
+      if (line.characterName()) {
+        cues.push(currentTriggerCue)
+        if (line.characterName()) {
+          text += ": "
+        }
+        currentTriggerCue = new TriggerCue(text, line.getCustomData("cue_id"))
+        currentTriggerCue.lines.push(line)
+        continue
+      }
+
+      // Otherwise, just append the text.
+      currentTriggerCue.name += text
+      currentTriggerCue.lines.push(line)
+    }
+
+    return cues
+  }
+
   async pushUpdates(...cues: Cue[]) {
-    const pushedCues = cues.map(async (cue) => this.oscClient.send(cue))
-    //this.cueApp.push(cues)
-    return pushedCues
+    return Promise.all(cues.map((cue) => this.oscClient.send(cue)))
   }
 
   /*
@@ -57,15 +91,15 @@ export default class Cues {
           id = this.mappingByCueNumber[cueNumber]
           color = this.triggerColorMap[cueNumber]
       }
-
+ 
       const cue = new Cue(token, id, color)
-
+ 
       let parentId
       if (parentNumber) {
           parentId = this.mappingByCueNumber[parentNumber]
           cue.setParent(parentId, this.triggerColorMap[parentNumber])
       }
-
+ 
       if (id && parentId) {
           const siblings = this.parentChildIdMap[parentId] || [];
           cue.childIndex = siblings.length;
@@ -76,7 +110,7 @@ export default class Cues {
       
       return cue
   }
-
+ 
   getAll(stage: Stage) {
       const tokens = stage.getTokens()
       
@@ -95,19 +129,19 @@ export default class Cues {
           }
           return map
       }, this.triggerColorMap)
-
+ 
       return tokens
           .reduce((p: Cue[], token: StageToken) => {
               const cue = this.get(token)
               return [ ...p, cue ]
           }, [])
   }
-
+ 
   async set(...cues: Cue[]) {
       if (!this.oscData.initialized) {
           await this.oscData.initialize()
       }
-
+ 
       const phaseValues = Object.values(Phase) as string[]
       phaseValues.forEach(async phase => {
           const bundles = cues.map(cue => new OscBundle(phase).addFromCue(cue))

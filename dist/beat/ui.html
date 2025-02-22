@@ -16,11 +16,11 @@
   osc.on("open", () => {
     Beat.log("Opened.")
     Beat.callAndWait("Beat.custom.handleOpen()")
-      .then(({address}) => {
+      .then(({address, password}) => {
         osc.on("*", (reply) => {
           Beat.call((arg) => Beat.custom.handleReply(arg), reply)
         })
-        osc.send(new OSC.Message(address))
+        osc.send(new OSC.Message(address, password))
         Beat.log(`Sent message to ${address}`)
       }, (error) => {
         Beat.call((error, status) => Beat.custom.handleError(error, status), [error, osc.status()])

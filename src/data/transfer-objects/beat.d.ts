@@ -19,18 +19,18 @@ declare namespace Beat {
     typeAsString() // type as string, "Heading" / "Action" / "Dialogue" / "Parenthetical" etc.
     characterName(): string // the character name only, with possible extensions removed
     uuid: string // identifier for this line, can be used to match line to paginated and exported content
-    isOutlineElement(): boolean ///false for scene headings, sections and synopsis lines
-    isTitlePage(): boolean ///false
-    isInvisible(): boolean ///false
+    isOutlineElement(): boolean // false for scene headings, sections and synopsis lines
+    isTitlePage(): boolean // false
+    isInvisible(): boolean // false
     cleanedString(): string // with non-printing stuff removed
     stripFormatting(): string // string with non-printing stuff and any Fountain formatting removed
-    omitted: boolean ///false
+    omitted: boolean // false
     note: boolean // the line is a note (wrapped in [[]]), true/false
     clone(): Line // a copy of the line, detached from the parser
     uuidString(): string // returns the unique identifier fo this line, which can be matched against JSON data, for example
     forSerialization(): JSON // JSON data for the line
-    setCustomData(key: string, value: object) // custom data for a key
-    getCustomData(key: string): object // custom data for a key
+    setCustomData(key: string, value: string) // custom data for a key
+    getCustomData(key: string): string // custom data for a key
   }
 
   type Scene = {
@@ -55,6 +55,20 @@ declare namespace Beat {
     type: "text" | "dropdown" | "checkbox"
     placeholder?: string
     items?: string[]
+  }
+
+  const currentParser: Parser // current parser
+
+  function parser(stringToParse: string): Parser // create a new parser
+
+  class Parser {
+    lines: Lines[] // line objects (note: property, not a method)
+    outline: Scene[] // all scene objects, including synopsis lines and sections (note: property, not a method)
+    scenes: Scene[] // scene objects only (note: property, not a method)
+    titlePage: object // title page elements
+    linesInRange(range: Range): Line[] // get all lines in the selected range (note: parameter has to be a range object)
+    lineAtIndex(index: number): Line // get line item at given character index
+    sceneAtIndex(index: number): Line // get outline item at given character index
   }
 
   function log(message: string)

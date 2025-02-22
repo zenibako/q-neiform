@@ -1,7 +1,7 @@
 import { Cue } from "./cue"
 
 // import Cue from "./cue.ts.bak";
-export default class Script {
+export class Script {
   cuesToCueAppId: Map<string, Cue>
 
   constructor() {
