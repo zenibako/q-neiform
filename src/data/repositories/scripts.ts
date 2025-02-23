@@ -50,27 +50,29 @@ export class Scripts {
       contextLinesFromApp.push(this.scriptApp.getCurrentLine())
     }
 
-    const contextLines = contextLinesFromApp.map(line => new Line(line))
+    const contextLines = contextLinesFromApp.map(line => {
+      return new Line(line, line.getCustomData("cue_id"))
+    })
 
     const [firstLine] = contextLines
+    const firstLineType = firstLine?.getType()
+
     let characterLine, dialogueLine
-    switch (firstLine?.getType()) {
-      // If first selected line is dialogue, get character line before it.
-      case LineType.DIALOGUE:
-        characterLine = this.getCharacterLineBefore(firstLine)
-        if (characterLine) {
-          contextLines.unshift(characterLine)
-        }
-        break
-      // If first selected line is a character name, get the first line after it.
-      case LineType.CHARACTER:
-        dialogueLine = this.getLineFromIndex(firstLine.getEndIndex())
-        if (dialogueLine) {
-          contextLines.push(dialogueLine)
-        }
+    // If first selected line is dialogue, get character line before it.
+    if (firstLineType === LineType.DIALOGUE) {
+      characterLine = this.getCharacterLineBefore(firstLine!)
+      if (characterLine) {
+        contextLines.unshift(characterLine)
+      }
+    }
+    // If first selected line is a character name, get the first line after it.
+    else if (firstLineType === LineType.CHARACTER && contextLines.length === 1) {
+      dialogueLine = this.getLineFromIndex(firstLine!.getEndIndex())
+      if (dialogueLine) {
+        contextLines.push(dialogueLine)
+      }
     }
 
-    this.logger.log(`lines: ${JSON.stringify(contextLines, null, 1)}`)
     return contextLines
   }
 

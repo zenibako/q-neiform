@@ -10,9 +10,9 @@ export default class PushCuesFromScript implements IUseCase {
     this.logger.log("Pushing cues...")
     try {
       const lines = this.scripts.getContextFromSelection()
-      this.logger.log(`lines: ${JSON.stringify(lines, null, 1)}`)
+      this.logger.log(`lines for cues: ${JSON.stringify(lines, null, 1)}`)
       const triggerCues = this.cues.getFromLines(lines)
-      this.logger.log(`Cues to push: ${JSON.stringify(triggerCues)}`)
+      this.logger.log(`cues to push: ${JSON.stringify(triggerCues, null, 1)}`)
       const pushedCues = await this.cues.pushUpdates(...triggerCues)
       this.scripts.updateLines(pushedCues)
     } catch (e) {

@@ -89,10 +89,7 @@ export class Cue {
     */
 }
 export class SceneCue extends Cue {
-  constructor(
-    public readonly name: string,
-    public readonly id?: string | null
-  ) {
+  constructor(name: string, id?: string | null) {
     super(name, id)
     this.initialize("group")
     this.queueAction(`${this.address}/mode`, 1)
@@ -100,10 +97,7 @@ export class SceneCue extends Cue {
 }
 
 export class TriggerCue extends Cue {
-  constructor(
-    public name: string,
-    public id?: string | null
-  ) {
+  constructor(name: string, id?: string | null) {
     super(name, id)
     this.initialize("group")
     this.queueAction(`${this.address}/mode`, 3)

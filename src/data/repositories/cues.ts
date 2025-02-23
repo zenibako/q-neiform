@@ -45,54 +45,53 @@ export default class Cues {
   }
 
   getFromLines(lines: Line[]) {
-    let triggerText = "", triggerCharacterName, triggerCueId, triggerLines: Line[] = []
-    this.logger.log(`lines: ${JSON.stringify(lines, null, 1)}`)
+    let triggerCue, triggerCharacterName
 
     const clear = () => {
-      triggerText = ""
+      this.logger.log("Clearing trigger vars...")
+      triggerCue = null
       triggerCharacterName = null
-      triggerCueId = null
-      triggerLines = []
     }
 
     clear()
     const cues: Cue[] = []
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!
+      const line = lines[i]
+      const isLastLine = (i === lines.length)
+      if (!line) {
+        continue
+      }
+
+
       const lineCharacterName = line.getType() == LineType.CHARACTER ? line.text : null
-      if (lineCharacterName && lineCharacterName !== triggerCharacterName) {
-        const triggerCue = new TriggerCue(triggerText, triggerCueId)
-        triggerCue.lines = [...triggerLines]
-        cues.push(triggerCue)
+      let cueName = line.text
+      let isDifferentCharacter = false
+      if (lineCharacterName) {
+        triggerCharacterName = lineCharacterName
+        isDifferentCharacter = lineCharacterName !== triggerCharacterName
+        cueName += ":"
+      }
+
+      if (!isLastLine) {
+        cueName += " "
+      }
+
+      const lineCue = new TriggerCue(cueName, line.cueId)
+      const pushCue: TriggerCue = triggerCue ?? lineCue
+      pushCue.lines.push(line)
+
+      if (isLastLine) {
+        cues.push(pushCue)
         clear()
-      }
+      } else if (isDifferentCharacter) {
+        cues.push(lineCue)
+        clear()
+      }       
 
-      triggerCharacterName = lineCharacterName ?? triggerCharacterName
-      triggerCueId = line.cueId
-      triggerText += `${line.text + lineCharacterName ? ": " : ""}`
-      triggerLines.push(line)
-      this.logger.log(`${triggerText}`)
-
-      /*
-      // If there's no current trigger cue, set one up and move on
-      if (currentTriggerCue === null) {
-        setTriggerCue(line)
-        continue
+      if (triggerCue) {
+        pushCue.name += cueName
       }
-  
-  
-      // A new character means a break in the dialogue and the end of the cue.
-      if (line.characterName()) {
-        cues.push(currentTriggerCue)
-        setTriggerCue(line)
-        continue
-      }
-  
-      // Otherwise, just append the text.
-      currentTriggerCue.name += line.cleanedString()
-      currentTriggerCue.lines.push(line)
-    }
-    */
+      triggerCue = pushCue
     }
 
     return cues
