@@ -10,7 +10,7 @@ export enum LineType {
 export class Line {
   public readonly text: string
   private readonly typeAsString: string
-  private readonly range: Beat.Range
+  public readonly range: Beat.Range
   constructor(
     appLine: Beat.Line,
     public cueId?: string | null
@@ -98,14 +98,16 @@ export class Scripts {
     return new Line(line, line.getCustomData("cue_id"))
   }
 
-  updateLines(cues: Cue[]) {
-    const lines: Line[] = []
-    for (const cue of cues) {
-      for (const line of cue.lines) {
-        const appLine = this.scriptApp.getLineFromIndex(line.getStartIndex())
-        this.scriptApp.setLineData(appLine, "cue_id", cue.id ?? null)
-        lines.push(line)
+  updateLines(lines: Line[]) {
+    for (const line of lines) {
+      const appLine = this.scriptApp.getLineFromIndex(line.getStartIndex())
+      this.scriptApp.setLineData(appLine, "cue_id", line.cueId ?? null)
+      if (line.cueId) {
+        this.scriptApp.setRangeColor(line.range, "green")
+      } else {
+        this.scriptApp.setRangeColor(line.range, "gray")
       }
+      lines.push(line)
     }
 
     return lines

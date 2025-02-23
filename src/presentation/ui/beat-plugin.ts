@@ -3,7 +3,7 @@ import { Scripts } from "../../data/repositories/scripts";
 import BeatApp, { Mode } from "../../data/sources/beat-app"
 import { QLabWorkspace } from "../../data/sources/qlab-app";
 import { Menu, MenuItem } from "../../domain/entities/menu";
-import PullCuesIntoScript from "../../domain/use-cases/pull-cues";
+import ClearCueMappings from "../../domain/use-cases/clear-mappings";
 import PushCuesFromScript from "../../domain/use-cases/push-cues";
 
 const beat = new BeatApp(Mode.DEVELOPMENT)
@@ -17,7 +17,7 @@ export default class BeatPlugin {
 
     const menu = new Menu(qlab.name, [
       new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues, beat)),
-      new MenuItem("Pull from Cues", new PullCuesIntoScript(cues, scripts))
+      new MenuItem("Clear Cue Mappings", new ClearCueMappings(scripts, beat))
     ])
 
     try {

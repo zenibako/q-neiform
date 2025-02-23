@@ -12,18 +12,18 @@ export class Cue {
   lines: Line[] = []
   address: string
   mode?: number
-  actionQueue: CueAction[] = []
+  private actionQueue: CueAction[] = []
   // fileTarget?: string
   // parentId?: string
   // childIndex?: number
 
   constructor(
     public name: string,
+    public type: CueType,
     public id?: string | null,
   ) {
-    // this.type = this.getCueType(token);
     this.address = `/cue/${this.id?.length ? this.id : "selected"}`;
-    this.queueAction(`${this.address}/name`, name)
+    // this.type = this.getCueType(token);
     /*
     if (this.type === 'group') {
       this.mode = type === 'trigger_begin' ? 3 : 1;
@@ -31,18 +31,27 @@ export class Cue {
     */
   }
 
-  initialize(type: CueType) {
+  getActions() {
     let initAction 
     if (this.id?.length) {
+      this.address = "/cue/selected";
       initAction = new CueAction(this.address)
     } else {
-      initAction = new CueAction("/new", [type])
+      initAction = new CueAction("/new", [this.type])
     }
+    this.actionQueue.unshift(new CueAction(`${this.address}/name`, [this.name]))
     this.actionQueue.unshift(initAction)
+    this.actionQueue.push(new CueAction(this.address))
+    return this.actionQueue
+  }
+
+  clearActions() {
+    this.actionQueue = []
   }
 
   queueAction(address: string, ...args: (string | number)[]) {
-    this.actionQueue.push(new CueAction(address, args))
+    this.address = `/cue/${this.id?.length ? this.id : "selected"}`;
+    this.actionQueue.push(new CueAction(this.address + address, args))
   }
 
   /*
@@ -90,16 +99,14 @@ export class Cue {
 }
 export class SceneCue extends Cue {
   constructor(name: string, id?: string | null) {
-    super(name, id)
-    this.initialize("group")
-    this.queueAction(`${this.address}/mode`, 1)
+    super(name, "group", id)
+    this.queueAction("/mode", 1)
   }
 }
 
 export class TriggerCue extends Cue {
   constructor(name: string, id?: string | null) {
-    super(name, id)
-    this.initialize("group")
-    this.queueAction(`${this.address}/mode`, 3)
+    super(name, "group", id)
+    this.queueAction("/mode", 3)
   }
 }

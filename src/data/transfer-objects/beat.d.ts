@@ -153,5 +153,8 @@ declare namespace Beat {
     items: ModalInput[]
   }): Record<string, string>
 
+  function textHighlight(color: string, location: number, length: number)
+  function textBackgroundHighlight(color: string, location: number, length: number)
+
   function end(): void
 }

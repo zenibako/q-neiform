@@ -123,18 +123,15 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         reject("No OSC server connected.")
       }
 
-      const messages = cue.actionQueue.map(({ address, args }) =>
+      const actionQueue = cue.getActions()
+      const messages = actionQueue.map(({ address, args }) =>
         `new OSC.Message(${[
           `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
           ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
         ].join(",")})`
       )
 
-      const expectedReplyCount = cue.actionQueue.filter(({ address }) => {
-        const dictKey = address.substring(address.lastIndexOf("/") + 1)
-        return this.oscServer?.dict[dictKey]?.replyDataExample
-      }).length
-
+      let isWaiting = false
       const replyStatuses: string[] = []
       Beat.custom.handleReply = (arg) => {
         const reply = arg as OSC.Message
@@ -143,26 +140,31 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         replyStatuses.push(status)
         Beat.log(`Received reply: address = ${address}, status = ${status}, data = ${data}`)
 
-        if (status === "ok" && address.endsWith(this.oscServer?.dict.new.address)) {
-          Beat.log(`Setting cue ID: ${data}`)
-          cue.id = data
+        if (status === "ok" && !isWaiting) {
+          if (address.endsWith(this.oscServer?.dict.new.address)) {
+            Beat.log(`Setting cue ID: ${data}`)
+            cue.id = data
+            isWaiting = true
+          }
         }
 
-        if (expectedReplyCount > 0 && replyStatuses.length < expectedReplyCount) {
-          Beat.log(`Still waiting for ${expectedReplyCount - 1} replies...`)
-          return
-        }
-
-        cue.actionQueue = []
         if (replyStatuses.includes("denied")) {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
           reject("Access revoked. Need to reopen plugin.")
         }
         if (replyStatuses.includes("error")) {
           Beat.alert("Send Error", "Some or all of the messages had errors. Check logs for details.")
+          reject("Send errors")
         }
 
-        this.updateStatusDisplay("All messages sent!")
+        if (isWaiting && !address.endsWith(cue.id)) {
+          Beat.log("Still waiting for replies...")
+          return
+        }
+
+        cue.clearActions()
+
+        this.updateStatusDisplay("All messages received!")
         resolve(cue)
       }
 
@@ -170,9 +172,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       Beat.log(sendJS)
       this.updateStatusDisplay(`Sending ${messages.length} messages...`)
       this.window?.runJS(sendJS)
-
-      const timeoutDelay = 5000
-      this.updateStatusDisplay(`Waiting ${timeoutDelay / 1000} seconds for replies.`)
     })
   }
 
@@ -189,6 +188,13 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.log(`Set custom data: ${key} = ${value}`)
     line.setCustomData(key, value ?? "")
     return line
+  }
+
+  setRangeColor(range: Beat.Range, backgroundColor: string, foregroundColor?: string) {
+    Beat.textBackgroundHighlight(backgroundColor, range.location, range.length)
+    if (foregroundColor) {
+      Beat.textHighlight(foregroundColor, range.location, range.length)
+    }
   }
 
   pullOutline() {
@@ -216,7 +222,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getSelectedLines(): Beat.Line[] {
-    return Beat.currentParser.linesInRange(Beat.selectedRange())
+    const linesInRange = Beat.currentParser.linesInRange(Beat.selectedRange())
+    return linesInRange.filter(line => (line.forSerialization()["string"] as string)?.length)
   }
 
   getLineFromIndex(index: number): Beat.Line {

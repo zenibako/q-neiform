@@ -28,19 +28,22 @@ export default class Cues {
   }
 
   getFromLines(lines: Line[]) {
-    let triggerCue, triggerCharacterName
+    let bufferCue, bufferCharacterName
 
-    const clear = () => {
-      this.logger.log("Clearing trigger vars...")
-      triggerCue = null
-      triggerCharacterName = null
+
+    const cues: Cue[] = []
+    const reset = (cue?: Cue) => {
+      if (cue) {
+        cues.push(cue)
+      }
+      bufferCue = null
+      bufferCharacterName = null
     }
 
-    clear()
-    const cues: Cue[] = []
+    reset()
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      const isLastLine = (i === lines.length)
+      const isLastLine = (i === lines.length - 1)
       if (!line) {
         continue
       }
@@ -50,8 +53,8 @@ export default class Cues {
       let cueName = line.text
       let isDifferentCharacter = false
       if (lineCharacterName) {
-        triggerCharacterName = lineCharacterName
-        isDifferentCharacter = lineCharacterName !== triggerCharacterName
+        isDifferentCharacter = lineCharacterName !== bufferCharacterName
+        bufferCharacterName = lineCharacterName
         cueName += ":"
       }
 
@@ -60,27 +63,40 @@ export default class Cues {
       }
 
       const lineCue = new TriggerCue(cueName, line.cueId)
-      const pushCue: TriggerCue = triggerCue ?? lineCue
-      pushCue.lines.push(line)
 
       if (isLastLine) {
-        cues.push(pushCue)
-        clear()
+        this.logger.log("Pushing buffer cue since this is the last line...")
+        let pushCue: Cue
+        if (bufferCue) {
+          bufferCue.name += cueName
+          pushCue = bufferCue
+        } else {
+          pushCue = lineCue
+        }
+        pushCue.lines.push(line)
+        reset(pushCue)
       } else if (isDifferentCharacter) {
-        cues.push(lineCue)
-        clear()
-      }       
-
-      if (triggerCue) {
-        pushCue.name += cueName
+        this.logger.log("Pushing bufer cue since this is a different character...")
+        reset(bufferCue)
       }
-      triggerCue = pushCue
+
+      if (bufferCue) {
+        bufferCue.name += cueName
+      } else {
+        bufferCue = lineCue
+      }
+
+      bufferCue?.lines.push(line)
     }
 
     return cues
   }
 
-  async pushUpdates(...cues: Cue[]) {
-    return Promise.all(cues.map((cue) => this.oscClient.send(cue)))
+  async pushUpdates(...cues: Cue[]): Promise<Cue[]> {
+    const pushedCues: Cue[] = []
+    for (const cue of cues) {
+      pushedCues.push(await this.oscClient.send(cue))
+    }
+    return pushedCues
   }
 }
