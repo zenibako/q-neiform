@@ -52,7 +52,23 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     connect: { address: "/connect" },
     reply: { address: "/reply" },
     workspace: { address: "/workspace" },
-    new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" }
+    new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" },
+    name: { address: "/name" },
+    selectedCues: {
+      address: "/selectedCues", replyDataExample: `[
+        {
+          "number": "{string}",
+          "uniqueID": {string},
+          "cues": [ {a cue dictionary}, {another dictionary}, {and another} ],
+          "flagged": true|false,
+          "listName": "{string}",
+          "type": "{string}",
+          "colorName": "{string}",
+          "colorName/live": "{string}",
+          "name": "{string}",
+          "armed": true|false,
+        }
+      ]` }
   }
 
   bridge(host: string = "localhost", port: number = 53000): Promise<string> {
@@ -90,8 +106,14 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     })
   }
 
-  getTargetAddress(address: string): string {
-    return `${this.dict.workspace.address}/${this.id}` + address
+  getTargetAddress(address?: string): string {
+    const workspaceAddress = `${this.dict.workspace.address}/${this.id}`
+
+    if (address) {
+      return workspaceAddress + address
+    } else {
+      return workspaceAddress
+    }
   }
 
   // private queue: OscBundle[] = []

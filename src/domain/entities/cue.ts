@@ -1,16 +1,17 @@
 import { Line } from "../../data/repositories/scripts";
 import { CueType } from "../../data/sources/qlab-app";
+import { IOscDictionary } from "../abstractions/i-osc";
 
-class CueAction {
+export class CueAction {
   constructor(
-    public readonly address: string,
+    public readonly address?: string,
     public readonly args: (string | number)[] = []
   ) { }
 }
 
 export class Cue {
   lines: Line[] = []
-  address: string
+  address?: string
   mode?: number
   private actionQueue: CueAction[] = []
   // fileTarget?: string
@@ -21,28 +22,18 @@ export class Cue {
     public name: string,
     public type: CueType,
     public id?: string | null,
-  ) {
-    this.address = `/cue/${this.id?.length ? this.id : "selected"}`;
-    // this.type = this.getCueType(token);
-    /*
-    if (this.type === 'group') {
-      this.mode = type === 'trigger_begin' ? 3 : 1;
-    }
-    */
-  }
+  ) { }
 
-  getActions() {
-    let initAction 
-    if (this.id?.length) {
-      this.address = "/cue/selected";
-      initAction = new CueAction(this.address)
-    } else {
-      initAction = new CueAction("/new", [this.type])
+  getActions(dict: IOscDictionary) {
+    const actions = [
+      new CueAction(`${this.getQueryAddress()}${dict.name.address}`, [this.name]),
+      ...this.actionQueue
+    ]
+
+    if (!this.id?.length) {
+      actions.unshift(new CueAction(dict.new.address, [this.type]))
     }
-    this.actionQueue.unshift(new CueAction(`${this.address}/name`, [this.name]))
-    this.actionQueue.unshift(initAction)
-    this.actionQueue.push(new CueAction(this.address))
-    return this.actionQueue
+    return actions
   }
 
   clearActions() {
@@ -50,8 +41,11 @@ export class Cue {
   }
 
   queueAction(address: string, ...args: (string | number)[]) {
-    this.address = `/cue/${this.id?.length ? this.id : "selected"}`;
-    this.actionQueue.push(new CueAction(this.address + address, args))
+    this.actionQueue.push(new CueAction(this.getQueryAddress() + address, args))
+  }
+
+  getQueryAddress() {
+    return `/cue/${this.id?.length ? this.id : "selected"}`
   }
 
   /*

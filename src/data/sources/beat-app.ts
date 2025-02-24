@@ -3,12 +3,18 @@ import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
-import { Cue } from "../../domain/entities/cue"
+import { Cue, CueAction } from "../../domain/entities/cue"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
 const WS_DEFAULT_ADDRESS = "localhost"
 const WS_DEFAULT_PORT = "8080"
+
+type ServerConfiguration = {
+  host: string | null
+  port: string | null
+  password?: string | null
+}
 
 export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   private window?: Beat.Window
@@ -18,6 +24,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     if (this.mode == Mode.DEVELOPMENT) {
       Beat.openConsole()
     }
+
 
     Beat.onSelectionChange((location, length) => {
       if (!this.oscServer) {
@@ -29,13 +36,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       const cueId = Beat.currentLine.getCustomData("cue_id")
       this.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
     })
+
   }
 
   log(message: string) {
     Beat.log(message)
   }
 
-  async connect(oscServer: IOscServer): Promise<string> {
+  private promptUserForServerInfo() {
     const modalResponse = Beat.modal({
       title: "Connect to QLab.",
       info: "You must first run \"q-neiform bridge serve\" in Terminal to relay OSC messages between the cue server. Once you have done that, fill out the below (or leave blank for defaults), then click OK to connect.",
@@ -48,31 +56,48 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       throw new Error("Modal cancelled.")
     }
 
-    const { address, port } = modalResponse
+    return modalResponse
+  }
+
+  private promptUserForPassword() {
+    const passModalResponse = Beat.modal({
+      title: "Connect to q-neiform OSC bridge.",
+      info: `Enter the password in your cue server.`,
+      items: [
+        { type: "text", name: "password", label: "Password" }
+      ]
+    })
+
+    if (!passModalResponse) {
+      throw new Error("Password not provided")
+    }
+    return passModalResponse.password
+  }
+
+  async connect(oscServer: IOscServer): Promise<string> {
+    let serverConfig = this.loadServerConfiguration()
+    if (!serverConfig?.host || !serverConfig?.port) {
+      const { address: modalHost, port: modalPort } = this.promptUserForServerInfo()
+      const host = modalHost?.length ? modalHost : WS_DEFAULT_ADDRESS
+      const port = modalPort?.length ? modalPort : WS_DEFAULT_PORT
+      serverConfig = { host, port }
+      this.saveServerConfiguration(serverConfig)
+    }
+
     const ui = Beat.assetAsString("ui.html")
-    if (address?.length) {
-      ui.replace(WS_DEFAULT_ADDRESS, address)
-    }
-    if (port?.length) {
-      ui.replace(WS_DEFAULT_PORT, port)
-    }
+    ui.replace(WS_DEFAULT_ADDRESS, serverConfig.host as string)
+    ui.replace(WS_DEFAULT_PORT, serverConfig.port as string)
 
     const connectAddress = oscServer.dict.connect?.address
     return new Promise((resolve, reject) => {
       Beat.custom = {
         handleOpen: () => {
-          const passModalResponse = Beat.modal({
-            title: "Connect to q-neiform OSC bridge.",
-            info: `Enter the password in your cue server.`,
-            items: [
-              { type: "text", name: "password", label: "Password" }
-            ]
-          })
-          if (!passModalResponse) {
-            reject("Password not provided")
-            return
+          let { password } = serverConfig
+          if (!password) {
+            password = this.promptUserForPassword()
+            serverConfig.password = password
           }
-          return { address: connectAddress, password: passModalResponse.password }
+          return { address: connectAddress, password }
         },
         handleReply: (arg) => {
           const reply = arg as OSC.Message
@@ -87,10 +112,13 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
             const splitData = (data as string).split(":")
             if (splitData.length < 2) {
               Beat.alert("Access Error", "Password was incorrect or did not provide permissions. Please try again.")
+              serverConfig.password = null
+              this.saveServerConfiguration(serverConfig)
               reject("Wrong password")
             }
+            this.saveServerConfiguration(serverConfig)
             oscServer.id = workspace_id
-            this.updateStatusDisplay("Connected!")
+            this.updateStatusDisplay(`Connected to QLab server on ${serverConfig.host}:${serverConfig.port}.`)
             this.oscServer = oscServer
           }
           resolve("Received reply")
@@ -100,6 +128,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           Beat.log(`Received error: ${error}`)
           const { title, message } = this.getAlertInfo(status)
           Beat.alert(title, message)
+          this.saveServerConfiguration({ host: null, port: null })
           this.window?.close()
           reject(title)
         }
@@ -117,13 +146,28 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return !!this.oscServer
   }
 
-  send(cue: Cue): Promise<Cue> {
+  loadServerConfiguration(): ServerConfiguration | null {
+    return Beat.getDocumentSetting("server") as ServerConfiguration
+  }
+
+  saveServerConfiguration(server: ServerConfiguration | null) {
+    Beat.setDocumentSetting("server", server)
+  }
+
+  send(...cues: Cue[]): Promise<Cue[]> {
     return new Promise((resolve, reject) => {
       if (!this.oscServer) {
         reject("No OSC server connected.")
+        return
       }
 
-      const actionQueue = cue.getActions()
+      const { dict } = this.oscServer
+      const actionQueue: CueAction[] = []
+      for (const cue of cues) {
+        actionQueue.push(...cue.getActions(dict))
+      }
+      actionQueue.push(new CueAction())
+
       const messages = actionQueue.map(({ address, args }) =>
         `new OSC.Message(${[
           `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
@@ -131,41 +175,42 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         ].join(",")})`
       )
 
-      let isWaiting = false
-      const replyStatuses: string[] = []
+      const complete = (message: string) => {
+        cues.forEach(cue => cue.clearActions())
+        this.updateStatusDisplay(message)
+        resolve(cues)
+      }
+
+      Beat.custom.handleCompletion = (arg) => complete(arg as string)
       Beat.custom.handleReply = (arg) => {
         const reply = arg as OSC.Message
         const [responseBodyString] = reply.args
         const { status, address, data } = JSON.parse(responseBodyString as string)
-        replyStatuses.push(status)
-        Beat.log(`Received reply: address = ${address}, status = ${status}, data = ${data}`)
+        Beat.log(`Received reply: ${responseBodyString}`)
 
-        if (status === "ok" && !isWaiting) {
-          if (address.endsWith(this.oscServer?.dict.new.address)) {
-            Beat.log(`Setting cue ID: ${data}`)
-            cue.id = data
-            isWaiting = true
-          }
-        }
-
-        if (replyStatuses.includes("denied")) {
+        if (status === "denied") {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
+          this.updateStatusDisplay("Access denied.")
           reject("Access revoked. Need to reopen plugin.")
         }
-        if (replyStatuses.includes("error")) {
-          Beat.alert("Send Error", "Some or all of the messages had errors. Check logs for details.")
+        if (status === "error") {
+          this.updateStatusDisplay("Errors while sending. Check logs for details.")
           reject("Send errors")
         }
 
-        if (isWaiting && !address.endsWith(cue.id)) {
-          Beat.log("Still waiting for replies...")
+        if (address.endsWith(dict.new.address)) {
+          const cueWithoutId = cues.find((cue) => !cue.id)
+          if (cueWithoutId) {
+            cueWithoutId.id = data
+          }
+        }
+
+        if (address.endsWith(this.oscServer?.getTargetAddress())) {
+          complete("All messages were received!")
           return
         }
 
-        cue.clearActions()
-
-        this.updateStatusDisplay("All messages received!")
-        resolve(cue)
+        Beat.log("Still waiting for replies...")
       }
 
       const sendJS = `osc.send(new OSC.Bundle([${messages.join(",")}]))`

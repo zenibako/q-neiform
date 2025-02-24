@@ -141,8 +141,15 @@ declare namespace Beat {
 
   let custom: Record<string, (arg1: unknown | unknown[]) => void>
   function call(customFunction: (arg: object) => void, arg: object)
-
+    
+  type DocumentSetting = string | number | boolean | Record<string, string | number | boolean | null> | null
+  function getDocumentSetting(settingName: string): DocumentSetting
+  function setDocumentSetting(settingName: string, settingValue: DocumentSetting): void
+  function openFile(extensions: string[], callback: (filename?: string) => void): string
+  function saveFile(extension: string, callback: (filename?: string) => void): void
   function assetAsString(path: string): string
+  function fileToString(path: string): string
+  function writeToFile(path: string, content: string): void
   function htmlWindow(ui: UI, height: number, width: number, callback: () => void): Window
   function alert(alertTitle: string, informativeText: string)
   function confirm(title: string, description: string): boolean

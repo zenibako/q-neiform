@@ -5,7 +5,7 @@ import { IUseCase } from "../abstractions/i-use-cases";
 export default class ClearCueMappings implements IUseCase {
   constructor(private scripts: Scripts, private logger: ILogger) { }
 
-  async execute() {
+  execute() {
     this.logger.log("Clearing cue mappings...")
     try {
       const lines = this.scripts.getContextFromSelection()

@@ -93,10 +93,6 @@ export default class Cues {
   }
 
   async pushUpdates(...cues: Cue[]): Promise<Cue[]> {
-    const pushedCues: Cue[] = []
-    for (const cue of cues) {
-      pushedCues.push(await this.oscClient.send(cue))
-    }
-    return pushedCues
+    return this.oscClient.send(...cues)
   }
 }
