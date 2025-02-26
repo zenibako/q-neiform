@@ -1,6 +1,5 @@
 import ILogger from "../../domain/abstractions/i-logger";
 import { IScriptApp } from "../../domain/abstractions/i-script";
-import { Cue } from "../../domain/entities/cue";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
