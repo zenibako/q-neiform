@@ -1,30 +1,38 @@
 <span id="status"></span>
 <script type="text/javascript" src="lib/osc.min.js"></script>
 <script type="text/javascript">
-  const delay = 30000
   const host = "localhost"
   const port = 8080
   const osc = new OSC({
     plugin: new OSC.WebsocketClientPlugin({host, port})
   })
   const connectMessage = `Connecting to bridge at ${host}:${port}...`
-  document.querySelector("#status").textContent = connectMessage
-  Beat.log(connectMessage)
-  osc.on("error", (error) => {
+
+  const sendMessage = (message, replyAddress = "*") => {
+    const replyListener = osc.on(replyAddress, (reply) => {
+      Beat.log(`Received reply and pushed to plugin:\n${JSON.stringify(reply, null, 1)}`)
+      osc.off(replyAddress, replyListener)
+      Beat.call((arg) => Beat.custom.handleReply(arg), reply)
+    })
+    osc.send(message)
+    Beat.log(`Sent message(s) to:\n${(message?.bundleElements ?? [message])?.map(({address}) => ` - ${address}`).join("\n")}`)
+  }
+
+  const throwError = (error) => {
     Beat.call((error, status) => Beat.custom.handleError(error, status), [error, osc.status()])
-  })
+  }
+
+  const updateStatusDisplay = (message) => (document.querySelector("#status").textContent = message)
+
+  updateStatusDisplay(connectMessage)
+  Beat.log(connectMessage)
+  osc.on("error", (error) => throwError(error))
   osc.on("open", () => {
     Beat.log("Opened.")
-    Beat.callAndWait("Beat.custom.handleOpen()")
-      .then(({address, password}) => {
-        osc.on("*", (reply) => {
-          Beat.call((arg) => Beat.custom.handleReply(arg), reply)
-        })
-        osc.send(new OSC.Message(address, password))
-        Beat.log(`Sent message to ${address}`)
-      }, (error) => {
-        Beat.call((error, status) => Beat.custom.handleError(error, status), [error, osc.status()])
-      })
+    Beat.callAndWait("Beat.custom.handleOpen()").then(
+      ({address, password}) => sendMessage(new OSC.Message(address, password)),
+      (error) => throwError(error)
+    )
   })
   osc.open()
 </script>

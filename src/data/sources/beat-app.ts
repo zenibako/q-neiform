@@ -3,7 +3,8 @@ import { IScriptApp } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
-import { Cue, CueAction } from "../../domain/entities/cue"
+import Cues from "../repositories/cues"
+import { Cue } from "../../domain/entities/cue"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -97,11 +98,12 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
             password = this.promptUserForPassword()
             serverConfig.password = password
           }
+          // this.listenforReply()
           return { address: connectAddress, password }
         },
         handleReply: (arg) => {
           const reply = arg as OSC.Message
-          Beat.log(`Received reply: ${reply}`)
+          Beat.log(`Received connect reply in plugin!`)
           const { address, args } = reply
           if (connectAddress && address.includes(connectAddress)) {
             if (!args?.length) {
@@ -154,74 +156,63 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", server)
   }
 
-  send(...cues: Cue[]): Promise<Cue[]> {
+  async sendCues(cues: Cues): Promise<Cues> {
+    for await (let cue of cues) {
+      cue = await this.sendCue(cue)
+      cue.clearActions()
+    }
+
+    return cues
+  }
+
+  sendCue(cue: Cue): Promise<Cue> {
+    if (!this.oscServer) {
+      throw new Error("No OSC server connected.")
+    }
+    const { dict } = this.oscServer
+
     return new Promise((resolve, reject) => {
-      if (!this.oscServer) {
-        reject("No OSC server connected.")
-        return
-      }
-
-      const { dict } = this.oscServer
-      const actionQueue: CueAction[] = []
-      for (const cue of cues) {
-        actionQueue.push(...cue.getActions(dict))
-      }
-      actionQueue.push(new CueAction())
-
-      const messages = actionQueue.map(({ address, args }) =>
-        `new OSC.Message(${[
-          `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
-          ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
-        ].join(",")})`
-      )
-
-      const complete = (message: string) => {
-        cues.forEach(cue => cue.clearActions())
-        this.updateStatusDisplay(message)
-        resolve(cues)
-      }
-
-      Beat.custom.handleCompletion = (arg) => complete(arg as string)
       Beat.custom.handleReply = (arg) => {
-        const reply = arg as OSC.Message
-        const [responseBodyString] = reply.args
+        Beat.log(`Received send reply in plugin!`)
+        const [responseBodyString] = (arg as OSC.Message).args
         const { status, address, data } = JSON.parse(responseBodyString as string)
-        Beat.log(`Received reply: ${responseBodyString}`)
 
         if (status === "denied") {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
           this.updateStatusDisplay("Access denied.")
           reject("Access revoked. Need to reopen plugin.")
         }
+
         if (status === "error") {
           this.updateStatusDisplay("Errors while sending. Check logs for details.")
           reject("Send errors")
         }
 
         if (address.endsWith(dict.new.address)) {
-          const cueWithoutId = cues.find((cue) => !cue.id)
-          if (cueWithoutId) {
-            cueWithoutId.id = data
-          }
+          cue.id = data
+          Beat.log(`Set ID ${data} on cue: ${cue.name}`)
         }
 
-        if (address.endsWith(this.oscServer?.getTargetAddress())) {
-          complete("All messages were received!")
-          return
-        }
-
-        Beat.log("Still waiting for replies...")
+        resolve(cue)
       }
 
-      const sendJS = `osc.send(new OSC.Bundle([${messages.join(",")}]))`
-      Beat.log(sendJS)
-      this.updateStatusDisplay(`Sending ${messages.length} messages...`)
-      this.window?.runJS(sendJS)
+      const messages = cue.getActions(dict).map(({ address, args }) =>
+        `new OSC.Message(${[
+          `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
+          ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
+        ].join(",")})`
+      )
+      this.window?.runJS(`sendMessage(new OSC.Bundle([${messages.join(",")}]))`)
+      if (cue.id) {
+        resolve(cue)
+      } else {
+        Beat.log(`Waiting for reply so ID can be set...`)
+      }
     })
   }
 
   updateStatusDisplay(text: string) {
-    this.window?.runJS(`document.querySelector("#status").textContent = "${text}"`)
+    this.window?.runJS(`updateStatusDisplay("${text}")`)
   }
 
   disconnect() {
@@ -294,5 +285,4 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         }
     }
   }
-
 }

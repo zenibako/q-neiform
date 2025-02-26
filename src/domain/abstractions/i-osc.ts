@@ -1,8 +1,10 @@
+import Cues from "../../data/repositories/cues"
 import { Cue } from "../entities/cue"
 
 export interface IOscClient {
   connect(oscServer: IOscServer): Promise<string>
-  send(...cues: Cue[]): Promise<Cue[]>
+  sendCue(cue: Cue): Promise<Cue>
+  sendCues(cues: Cues): Promise<Cues>
 }
 
 export interface IOscDictionaryEntry {

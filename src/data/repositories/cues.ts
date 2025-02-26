@@ -1,11 +1,11 @@
 import { ICueApp } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
-import { IOscClient } from "../../domain/abstractions/i-osc";
-import { Cue, TriggerCue } from "../../domain/entities/cue";
+import { IOscClient, IOscDictionary } from "../../domain/abstractions/i-osc";
+import { Cue, CueAction, TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 
-export default class Cues {
-  constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
+export default class Cues implements Iterable<Cue> {
+  private cueArray: Cue[] = []
 
   async initialize() {
     this.logger.log("Initializing cues...")
@@ -17,7 +17,19 @@ export default class Cues {
     }
   }
 
-  getName(): string {
+  constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
+
+  *[Symbol.iterator](): IterableIterator<Cue> {
+    for (let i = 0; i < this.cueArray.length; ++i) {
+      const cue = this.cueArray[i]
+      if (!cue) {
+        continue
+      }
+      yield cue
+    }
+  }
+
+  getSourceName(): string {
     return this.cueApp.name
   }
 
@@ -27,14 +39,13 @@ export default class Cues {
     return []
   }
 
-  getFromLines(lines: Line[]) {
+  addFromLines(lines: Line[]) {
     let bufferCue, bufferCharacterName
 
-
-    const cues: Cue[] = []
+    const cuesToAdd: Cue[] = []
     const reset = (cue?: Cue) => {
       if (cue) {
-        cues.push(cue)
+        cuesToAdd.push(cue)
       }
       bufferCue = null
       bufferCharacterName = null
@@ -76,7 +87,7 @@ export default class Cues {
         pushCue.lines.push(line)
         reset(pushCue)
       } else if (isDifferentCharacter) {
-        this.logger.log("Pushing bufer cue since this is a different character...")
+        this.logger.log("Pushing buffer cue since this is a different character...")
         reset(bufferCue)
       }
 
@@ -89,10 +100,33 @@ export default class Cues {
       bufferCue?.lines.push(line)
     }
 
-    return cues
+    this.cueArray.push(...cuesToAdd)
   }
 
-  async pushUpdates(...cues: Cue[]): Promise<Cue[]> {
-    return this.oscClient.send(...cues)
+  getFirstCueWithoutId() {
+    for (const cue of this.cueArray) {
+      if (!cue.id) {
+        return cue
+      }
+    }
+
+    return null
+  }
+  getActions(dict: IOscDictionary) {
+    const actionQueue: CueAction[] = []
+    for (const cue of this.cueArray) {
+      actionQueue.push(...cue.getActions(dict))
+    }
+    return actionQueue
+  }
+
+  clearActions() {
+    this.cueArray.forEach(cue => cue.clearActions())
+  }
+
+  async pushUpdates(): Promise<Cues> {
+    const pushedCues = await this.oscClient.sendCues(this)
+    Beat.log(`Pushed cues!`)
+    return pushedCues
   }
 }

@@ -139,7 +139,7 @@ declare namespace Beat {
 
   let currentLine: Line
 
-  let custom: Record<string, (arg1: unknown | unknown[]) => void>
+  let custom: Record<string, ((arg1: unknown | unknown[]) => void) | null>
   function call(customFunction: (arg: object) => void, arg: object)
     
   type DocumentSetting = string | number | boolean | Record<string, string | number | boolean | null> | null
@@ -162,6 +162,18 @@ declare namespace Beat {
 
   function textHighlight(color: string, location: number, length: number)
   function textBackgroundHighlight(color: string, location: number, length: number)
+
+  function async(backgroundFunction: () => void): void
+  function sync(mainThreadFunction: () => void): void
+  
+  type Timer = {
+    invalidate(): void
+    stop(): void
+    start(): void
+    running(): boolean
+  }
+
+  function timer(seconds: number, callback: () => void, repeat: boolean = false): Timer
 
   function end(): void
 }

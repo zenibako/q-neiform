@@ -99,14 +99,11 @@ export class Scripts {
   }
 
   updateLines(lines: Line[]) {
+    this.logger.log("Updating lines...")
     for (const line of lines) {
       const appLine = this.scriptApp.getLineFromIndex(line.getStartIndex())
       this.scriptApp.setLineData(appLine, "cue_id", line.cueId ?? null)
-      if (line.cueId) {
-        this.scriptApp.setRangeColor(line.range, "green")
-      } else {
-        this.scriptApp.setRangeColor(line.range, "gray")
-      }
+      this.scriptApp.setRangeColor(line.range, line.cueId ? "green" : "gray")
       lines.push(line)
     }
 

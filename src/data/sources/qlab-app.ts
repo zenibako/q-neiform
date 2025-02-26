@@ -54,6 +54,7 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     workspace: { address: "/workspace" },
     new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" },
     name: { address: "/name" },
+    update: { address: "/update" },
     selectedCues: {
       address: "/selectedCues", replyDataExample: `[
         {
@@ -89,14 +90,15 @@ export class QLabWorkspace implements ICueApp, IOscServer {
         reject('No OSC server set')
         return
       }
-      this.osc.on("*", ({ address, args }: OSC.Message) => {
+      this.osc.on("*", (message: OSC.Message) => {
+        const { address } = message
         if (address.includes(this.dict.reply.address)) {
-          this.logger.log(`Received reply with address ${address}${args?.length ? " and args: " + args : ""}.`)
+          this.logger.log(`Forwarding reply to WebSocket client:\n${this.logOscMessage(message)}`)
           if (address.includes(this.dict.connect.address)) {
             resolve("Successfully connected.")
           }
         } else {
-          this.logger.log(`Received message with address ${address}${args?.length ? " and args: " + args : ""}.`)
+          this.logger.log(`Received message for UDP server:\n${this.logOscMessage(message)}`)
         }
       })
       this.osc.on("error", (error: unknown) => {
@@ -106,14 +108,17 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     })
   }
 
-  getTargetAddress(address?: string): string {
-    const workspaceAddress = `${this.dict.workspace.address}/${this.id}`
+  private logOscMessage({ address, args }: OSC.Message) {
+    return ` ├ address: ${address}${args?.length ? "\n └ args: " + args : ""}`
+  }
 
+  getTargetAddress(address?: string): string {
+    let workspaceAddress = `${this.dict.workspace.address}/${this.id}`
     if (address) {
-      return workspaceAddress + address
-    } else {
-      return workspaceAddress
+      workspaceAddress += address
     }
+
+    return workspaceAddress 
   }
 
   // private queue: OscBundle[] = []
