@@ -1,15 +1,16 @@
 import { Line } from "../../data/repositories/scripts";
 import { CueType } from "../../data/sources/qlab-app";
+import { ICue, ICueAction } from "../abstractions/i-cues";
 import { IOscDictionary } from "../abstractions/i-osc";
 
-export class CueAction {
+export class CueAction implements ICueAction {
   constructor(
     public readonly address?: string,
     public readonly args: (string | number)[] = []
   ) { }
 }
 
-export class Cue {
+export class Cue implements ICue {
   lines: Line[] = []
   address?: string
   mode?: number

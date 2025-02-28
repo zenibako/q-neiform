@@ -1,5 +1,5 @@
 import ILogger from "../../domain/abstractions/i-logger";
-import { IScriptApp } from "../../domain/abstractions/i-script";
+import { IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
@@ -10,14 +10,12 @@ export class Line {
   public readonly text: string
   private readonly typeAsString: string
   public readonly range: Beat.Range
-  constructor(
-    appLine: Beat.Line,
-    public cueId?: string | null
-  ) {
-    const jsonAppLine = appLine.forSerialization()
-    this.text = jsonAppLine["string"] as string
-    this.typeAsString = jsonAppLine["typeAsString"] as string
-    this.range = jsonAppLine["range"] as Beat.Range
+  public cueId?: string
+  constructor(scriptAppLine: IScriptAppLine) {
+    this.text = scriptAppLine.string
+    this.typeAsString = scriptAppLine.typeAsString
+    this.range = scriptAppLine.range
+    this.cueId = scriptAppLine.cueId
   }
 
   getType() {
@@ -49,9 +47,7 @@ export class Scripts {
       contextLinesFromApp.push(this.scriptApp.getCurrentLine())
     }
 
-    const contextLines = contextLinesFromApp.map(line => {
-      return new Line(line, line.getCustomData("cue_id"))
-    })
+    const contextLines = contextLinesFromApp.map(line => new Line(line))
 
     const [firstLine] = contextLines
     const firstLineType = firstLine?.getType()
@@ -94,14 +90,14 @@ export class Scripts {
 
   getLineFromIndex(index: number): Line {
     const line = this.scriptApp.getLineFromIndex(index)
-    return new Line(line, line.getCustomData("cue_id"))
+    return new Line(line)
   }
 
   updateLines(lines: Line[]) {
     this.logger.log("Updating lines...")
     for (const line of lines) {
       const appLine = this.scriptApp.getLineFromIndex(line.getStartIndex())
-      this.scriptApp.setLineData(appLine, "cue_id", line.cueId ?? null)
+      this.scriptApp.setLineData(appLine.range, "cue_id", line.cueId ?? null)
       this.scriptApp.setRangeColor(line.range, line.cueId ? "green" : "gray")
       lines.push(line)
     }

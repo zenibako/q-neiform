@@ -1,11 +1,22 @@
 import { Menu } from "../entities/menu";
 
+export interface IRange {
+  location: number; 
+  length: number
+}
+
+export interface IScriptAppLine {
+  string: string,
+  typeAsString: string,
+  range: IRange,
+  cueId?: string
+}
+
 export interface IScriptApp {
   mountMenu(menu: Menu): void
-  getCurrentLine(): Beat.Line
-  getSelectedLines(): Beat.Line[]
-  getLineFromIndex(index: number): Beat.Line
-  setLineData(line: Beat.Line, key: string, value: string | null): Beat.Line
-  setRangeColor(range: Beat.Range, backgroundColor: string, foregroundColor?: string): void
-  pullOutline(): Beat.Scene[]
+  getCurrentLine(): IScriptAppLine
+  getSelectedLines(): IScriptAppLine[]
+  getLineFromIndex(index: number): IScriptAppLine
+  setLineData(range: IRange, key: string, value: string | null): void
+  setRangeColor(range: IRange, backgroundColor: string, foregroundColor?: string): void
 }

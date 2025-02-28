@@ -1,10 +1,9 @@
 import { IMenuItem, Menu } from "../../domain/entities/menu"
-import { IScriptApp } from "../../domain/abstractions/i-script"
+import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
-import Cues from "../repositories/cues"
-import { Cue } from "../../domain/entities/cue"
+import { ICue, ICues } from "../../domain/abstractions/i-cues"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -156,7 +155,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", server)
   }
 
-  async sendCues(cues: Cues): Promise<Cues> {
+  async sendCues(cues: ICues): Promise<ICues> {
     for await (let cue of cues) {
       cue = await this.sendCue(cue)
       cue.clearActions()
@@ -165,7 +164,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return cues
   }
 
-  sendCue(cue: Cue): Promise<Cue> {
+  sendCue(cue: ICue): Promise<ICue> {
     if (!this.oscServer) {
       throw new Error("No OSC server connected.")
     }
@@ -202,6 +201,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
         ].join(",")})`
       )
+      Beat.log(`messages: ${messages}`)
       this.window?.runJS(`sendMessage(new OSC.Bundle([${messages.join(",")}]))`)
       if (cue.id) {
         resolve(cue)
@@ -220,10 +220,10 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.end()
   }
 
-  setLineData(line: Beat.Line, key: string, value: string | null) {
+  setLineData(range: IRange, key: string, value: string | null) {
     Beat.log(`Set custom data: ${key} = ${value}`)
+    const line = Beat.currentParser.lineAtIndex(range.location)
     line.setCustomData(key, value ?? "")
-    return line
   }
 
   setRangeColor(range: Beat.Range, backgroundColor: string, foregroundColor?: string) {
@@ -254,16 +254,28 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getCurrentLine() {
-    return Beat.currentLine
+    return this.getScriptAppLine(Beat.currentLine)
   }
 
-  getSelectedLines(): Beat.Line[] {
+  getSelectedLines() {
     const linesInRange = Beat.currentParser.linesInRange(Beat.selectedRange())
-    return linesInRange.filter(line => (line.forSerialization()["string"] as string)?.length)
+    return linesInRange
+      .filter(line => (line.forSerialization()["string"] as string)?.length)
+      .map(line => this.getScriptAppLine(line))
   }
 
-  getLineFromIndex(index: number): Beat.Line {
-    return Beat.currentParser.lineAtIndex(index)
+  getLineFromIndex(index: number) {
+    return this.getScriptAppLine(Beat.currentParser.lineAtIndex(index))
+  }
+
+  private getScriptAppLine(beatLine: Beat.Line): IScriptAppLine {
+    const serializedBeatLine = beatLine.forSerialization()
+    return {
+      string: serializedBeatLine.string as string,
+      typeAsString: serializedBeatLine.typeAsString as string,
+      range: serializedBeatLine.range as IRange,
+      cueId: beatLine.getCustomData("cue_id")
+    }
   }
 
   private getAlertInfo(status: number) {

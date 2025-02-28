@@ -1,25 +1,15 @@
-import { ICueApp } from "../../domain/abstractions/i-cues";
+import { ICue, ICueApp, ICues } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
 import { IOscClient, IOscDictionary } from "../../domain/abstractions/i-osc";
 import { Cue, CueAction, TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 
-export default class Cues implements Iterable<Cue> {
+export default class Cues implements ICues {
   private cueArray: Cue[] = []
-
-  async initialize() {
-    this.logger.log("Initializing cues...")
-    try {
-      this.logger.log("Initialized! Ready for cues.")
-    } catch (e) {
-      this.logger.log("Error while initializing: " + ((e as Error).message ?? e))
-      throw e
-    }
-  }
 
   constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
 
-  *[Symbol.iterator](): IterableIterator<Cue> {
+  *[Symbol.iterator](): IterableIterator<ICue> {
     for (let i = 0; i < this.cueArray.length; ++i) {
       const cue = this.cueArray[i]
       if (!cue) {
@@ -124,7 +114,7 @@ export default class Cues implements Iterable<Cue> {
     this.cueArray.forEach(cue => cue.clearActions())
   }
 
-  async pushUpdates(): Promise<Cues> {
+  async pushUpdates(): Promise<ICues> {
     const pushedCues = await this.oscClient.sendCues(this)
     Beat.log(`Pushed cues!`)
     return pushedCues

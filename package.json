@@ -1,6 +1,7 @@
 {
   "name": "q-neiform",
   "scripts": {
+    "test": "jest",
     "build:beat:esbuild": "./node_modules/.bin/esbuild bin/beat/plugin.ts --bundle --outdir=$HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin",
     "build:beat:webpack": "npx webpack && cp -a ./dist/beat/. $HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin"
   },
@@ -12,15 +13,19 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.13.1",
     "@types/webpack": "^5.28.5",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^15.15.0",
+    "jest": "^29.7.0",
+    "jest-mock-extended": "^4.0.0-beta1",
     "jiti": "^2.4.2",
     "openapi-typescript": "^7.6.1",
     "prettier": "^3.4.2",
+    "ts-jest": "^29.2.6",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
