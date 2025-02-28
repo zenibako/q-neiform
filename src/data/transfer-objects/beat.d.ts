@@ -139,7 +139,8 @@ declare namespace Beat {
 
   let currentLine: Line
 
-  let custom: Record<string, ((arg1: unknown | unknown[]) => void) | null>
+  type CustomFunctions = Record<string, ((arg1: unknown | unknown[]) => void) | null>
+  let custom: CustomFunctions
   function call(customFunction: (arg: object) => void, arg: object)
     
   type DocumentSetting = string | number | boolean | Record<string, string | number | boolean | null> | null

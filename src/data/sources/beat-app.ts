@@ -155,16 +155,13 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", server)
   }
 
-  async sendCues(cues: ICues): Promise<ICues> {
-    for await (let cue of cues) {
-      cue = await this.sendCue(cue)
-      cue.clearActions()
+  async sendCues(cues: ICues): Promise<void> {
+    for await (const cue of cues) {
+      await this.sendCue(cue)
     }
-
-    return cues
   }
 
-  sendCue(cue: ICue): Promise<ICue> {
+  sendCue(cue: ICue): Promise<void> {
     if (!this.oscServer) {
       throw new Error("No OSC server connected.")
     }
@@ -192,7 +189,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           Beat.log(`Set ID ${data} on cue: ${cue.name}`)
         }
 
-        resolve(cue)
+        cue.clearActions()
+        resolve()
       }
 
       const messages = cue.getActions(dict).map(({ address, args }) =>
@@ -204,7 +202,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       Beat.log(`messages: ${messages}`)
       this.window?.runJS(`sendMessage(new OSC.Bundle([${messages.join(",")}]))`)
       if (cue.id) {
-        resolve(cue)
+        cue.clearActions()
+        resolve()
       } else {
         Beat.log(`Waiting for reply so ID can be set...`)
       }

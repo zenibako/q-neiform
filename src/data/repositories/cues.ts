@@ -102,6 +102,7 @@ export default class Cues implements ICues {
 
     return null
   }
+
   getActions(dict: IOscDictionary) {
     const actionQueue: CueAction[] = []
     for (const cue of this.cueArray) {
@@ -114,9 +115,8 @@ export default class Cues implements ICues {
     this.cueArray.forEach(cue => cue.clearActions())
   }
 
-  async pushUpdates(): Promise<ICues> {
-    const pushedCues = await this.oscClient.sendCues(this)
+  async pushUpdates(): Promise<void> {
+    await this.oscClient.sendCues(this)
     Beat.log(`Pushed cues!`)
-    return pushedCues
   }
 }

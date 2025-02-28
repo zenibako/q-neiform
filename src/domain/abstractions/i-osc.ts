@@ -2,8 +2,8 @@ import { ICue, ICues } from "./i-cues"
 
 export interface IOscClient {
   connect(oscServer: IOscServer): Promise<string>
-  sendCue(cue: ICue): Promise<ICue>
-  sendCues(cues: ICues): Promise<ICues>
+  sendCue(cue: ICue): Promise<void>
+  sendCues(cues: ICues): Promise<void>
 }
 
 export interface IOscDictionaryEntry {

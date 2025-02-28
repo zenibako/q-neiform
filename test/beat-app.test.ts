@@ -1,5 +1,5 @@
 import { mock } from 'jest-mock-extended'
-import { ICue, ICueApp, ICues } from '../src/domain/abstractions/i-cues'
+import { ICueApp } from '../src/domain/abstractions/i-cues'
 import BeatApp, { Mode } from '../src/data/sources/beat-app'
 import { IOscClient, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
@@ -53,28 +53,27 @@ const replyNewData = {
   data: "12345"
 }
 
+type BeatCustomFunctions = Beat.CustomFunctions & {
+  handleOpen: () => void,
+  handleReply: (reply: OSC.Message) => void,
+}
+
 const mockBeatApi = mock<typeof Beat>()
 const mockBeatHtmlWindow = mock<Beat.Window>()
-globalThis.Beat = mockBeatApi
 mockBeatApi.assetAsString.mockReturnValue(`<span id="status">Connecting to bridge at localhost:8080...</span>`)
+const mockCustom = mock<BeatCustomFunctions>()
+mockBeatApi.custom = mockCustom
 mockBeatApi.htmlWindow.mockImplementation(() => {
   mockBeatApi.custom.handleOpen!(null)
   mockBeatApi.custom.handleReply!(new OSC.Message(dict.connect.address, JSON.stringify(connectData)))
   return mockBeatHtmlWindow
 })
-mockBeatHtmlWindow.runJS.mockReturnValue((address: string) => {
-  if (address.startsWith("sendMessage(")) {
-    mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
-  }
-})
 mockBeatApi.log.mockImplementation((message) => console.log(message))
 
+const handleReplySpy = jest.spyOn(mockCustom, "handleReply")
+
+globalThis.Beat = mockBeatApi
 const beat = new BeatApp(Mode.DEVELOPMENT)
-const mockCue1 = mock<IteratorResult<ICue,[]>>()
-const mockCue2 = mock<IteratorResult<ICue,[]>>()
-const mockCueIterator = mock<Iterator<ICue, [], null>>()
-mockCueIterator.next.mockReturnValueOnce(mockCue1)
-mockCueIterator.next.mockReturnValueOnce(mockCue2)
 
 const mockCueApp = mock<ICueApp>()
 const mockLogger = mock<ILogger>()
@@ -103,7 +102,16 @@ describe('Push cues with OSC client', () => {
     await beat.connect(oscServer)
   })
 
-  test('one cue', () => {
-    beat.sendCues(cues)
+  test('one cue', async () => {
+    mockBeatHtmlWindow.runJS.mockImplementation((address: string) => {
+      if (address.startsWith("sendMessage(")) {
+        mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
+      }
+    })
+
+    await beat.sendCues(cues)
+    for (const cue of cues) {
+      expect(cue.id).toBeTruthy()
+    }
   })
 })
