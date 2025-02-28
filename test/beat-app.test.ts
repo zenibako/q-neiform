@@ -70,8 +70,6 @@ mockBeatApi.htmlWindow.mockImplementation(() => {
 })
 mockBeatApi.log.mockImplementation((message) => console.log(message))
 
-const handleReplySpy = jest.spyOn(mockCustom, "handleReply")
-
 globalThis.Beat = mockBeatApi
 const beat = new BeatApp(Mode.DEVELOPMENT)
 
@@ -84,34 +82,55 @@ const line2 = "What's up Bob?"
 const line3 = "BOB"
 const line4 = "Who are you, lady?"
 
-const lines = [
-  { string: line1, typeAsString: "Character", range: { location: 0, length: line1.length } },
-  { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } },
-  { string: line3, typeAsString: "Character", range: { location: line2.length, length: line3.length } },
-  { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
-].map(line => new Line(line))
-
-const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
-cues.addFromLines(lines)
-
 const docSettingsSpy = jest.spyOn(Beat, "getDocumentSetting")
 
 describe('Push cues with OSC client', () => {
   beforeEach(async () => {
     docSettingsSpy.mockReturnValue(serverSettings)
     await beat.connect(oscServer)
-  })
 
-  test('one cue', async () => {
     mockBeatHtmlWindow.runJS.mockImplementation((address: string) => {
-      if (address.startsWith("sendMessage(")) {
+      if (address.startsWith("sendMessage")) {
         mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
       }
     })
+  })
 
+  test('one cue', async () => {
+    const lines = [
+      { string: line1, typeAsString: "Character", range: { location: 0, length: line1.length } },
+      { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } }
+    ].map(line => new Line(line))
+
+    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
+    cues.addFromLines(lines)
     await beat.sendCues(cues)
+    
+    let cueCount = 0
     for (const cue of cues) {
       expect(cue.id).toBeTruthy()
+      cueCount++
     }
+    expect(cueCount).toBe(1)
+  })
+
+  test('two cues', async () => {
+    const lines = [
+      { string: line1, typeAsString: "Character", range: { location: 0, length: line1.length } },
+      { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } },
+      { string: line3, typeAsString: "Character", range: { location: line2.length, length: line3.length } },
+      { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
+    ].map(line => new Line(line))
+
+    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
+    cues.addFromLines(lines)
+    await beat.sendCues(cues)
+
+    let cueCount = 0
+    for (const cue of cues) {
+      expect(cue.id).toBeTruthy()
+      cueCount++
+    }
+    expect(cueCount).toBe(2)
   })
 })
