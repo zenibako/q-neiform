@@ -1,9 +1,9 @@
-import { ICue, ICues } from "./i-cues"
-
 export interface IOscClient {
   connect(oscServer: IOscServer): Promise<string>
-  sendCue(cue: ICue): Promise<void>
-  sendCues(cues: ICues): Promise<void>
+  send(...messages: (IOscMessage | IOscBundle)[]): void
+  sendAndWaitForReply(...messages: (IOscMessage | IOscBundle)[]): Promise<string | null>
+  getDictionary(): IOscDictionary
+  getTargetAddress(address: string): string
 }
 
 export interface IOscDictionaryEntry {
@@ -16,8 +16,9 @@ export interface IOscDictionary {
   reply: IOscDictionaryEntry,
   workspace: IOscDictionaryEntry,
   new: IOscDictionaryEntry,
-  selectedCues: IOscDictionaryEntry,
+  //selectedCues: IOscDictionaryEntry,
   name: IOscDictionaryEntry,
+  mode: IOscDictionaryEntry,
   [index: string]: IOscDictionaryEntry
 }
 
@@ -26,4 +27,13 @@ export interface IOscServer {
   bridge(host: string, port: number): Promise<string>
   dict: IOscDictionary
   getTargetAddress(address?: string): string
+}
+
+export interface IOscMessage {
+  address: string,
+  args: (string | number)[]
+}
+
+export interface IOscBundle {
+  messages: IOscMessage[]
 }

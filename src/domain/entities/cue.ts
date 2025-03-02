@@ -1,11 +1,11 @@
 import { Line } from "../../data/repositories/scripts";
 import { CueType } from "../../data/sources/qlab-app";
-import { ICue, ICueAction } from "../abstractions/i-cues";
-import { IOscDictionary } from "../abstractions/i-osc";
+import { ICue } from "../abstractions/i-cues";
+import { IOscDictionary, IOscMessage } from "../abstractions/i-osc";
 
-export class CueAction implements ICueAction {
+export class CueAction implements IOscMessage {
   constructor(
-    public readonly address?: string,
+    public readonly address: string,
     public readonly args: (string | number)[] = []
   ) { }
 }
@@ -14,7 +14,6 @@ export class Cue implements ICue {
   lines: Line[] = []
   address?: string
   mode?: number
-  private actionQueue: CueAction[] = []
   // fileTarget?: string
   // parentId?: string
   // childIndex?: number
@@ -22,27 +21,25 @@ export class Cue implements ICue {
   constructor(
     public name: string,
     public type: CueType,
-    public id?: string | null,
+    public id: string | null = null,
   ) { }
 
+  private propActions: CueAction[] = []
+
+  addPropAction(address: string, ...args: (string | number)[]) {
+    this.propActions.push(new CueAction(this.getQueryAddress() + address, args))
+  }
+
   getActions(dict: IOscDictionary) {
-    const actions = [
-      new CueAction(`${this.getQueryAddress()}${dict.name.address}`, [this.name]),
-      ...this.actionQueue
-    ]
-
-    if (!this.id?.length) {
-      actions.unshift(new CueAction(dict.new.address, [this.type]))
+    if (!this.id) {
+      return [ new CueAction(dict.new.address, [this.type]) ]
     }
-    return actions
-  }
 
-  clearActions() {
-    this.actionQueue = []
-  }
-
-  queueAction(address: string, ...args: (string | number)[]) {
-    this.actionQueue.push(new CueAction(this.getQueryAddress() + address, args))
+    const propActions = [new CueAction(`${this.getQueryAddress()}${dict.name.address}`, [this.name])]
+    if (this.mode) {
+      this.propActions.push(new CueAction(`${this.getQueryAddress()}${dict.mode.address}`, [this.mode]))
+    }
+    return propActions
   }
 
   getQueryAddress() {
@@ -95,13 +92,13 @@ export class Cue implements ICue {
 export class SceneCue extends Cue {
   constructor(name: string, id?: string | null) {
     super(name, "group", id)
-    this.queueAction("/mode", 1)
+    this.mode = 1
   }
 }
 
 export class TriggerCue extends Cue {
   constructor(name: string, id?: string | null) {
     super(name, "group", id)
-    this.queueAction("/mode", 3)
+    this.mode = 3
   }
 }

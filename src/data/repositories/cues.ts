@@ -1,11 +1,11 @@
 import { ICue, ICueApp, ICues } from "../../domain/abstractions/i-cues";
 import ILogger from "../../domain/abstractions/i-logger";
-import { IOscClient, IOscDictionary } from "../../domain/abstractions/i-osc";
-import { Cue, CueAction, TriggerCue } from "../../domain/entities/cue";
+import { IOscClient } from "../../domain/abstractions/i-osc";
+import { Cue, TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 
 export default class Cues implements ICues {
-  private cueArray: Cue[] = []
+  private cueArray: ICue[] = []
 
   constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
 
@@ -32,8 +32,8 @@ export default class Cues implements ICues {
   addFromLines(lines: Line[]) {
     let bufferCue, bufferCharacterName
 
-    const cuesToAdd: Cue[] = []
-    const reset = (cue?: Cue) => {
+    const cuesToAdd: ICue[] = []
+    const reset = (cue?: ICue) => {
       if (cue) {
         cuesToAdd.push(cue)
       }
@@ -67,7 +67,7 @@ export default class Cues implements ICues {
 
       if (isLastLine) {
         this.logger.log("Pushing buffer cue since this is the last line...")
-        let pushCue: Cue
+        let pushCue: ICue
         if (bufferCue) {
           bufferCue.name += cueName
           pushCue = bufferCue
@@ -93,30 +93,18 @@ export default class Cues implements ICues {
     this.cueArray.push(...cuesToAdd)
   }
 
-  getFirstCueWithoutId() {
-    for (const cue of this.cueArray) {
-      if (!cue.id) {
-        return cue
-      }
+  async push(): Promise<void> {
+    for await (const cue of this.cueArray) {
+      await this.sendCue(cue)
     }
-
-    return null
   }
 
-  getActions(dict: IOscDictionary) {
-    const actionQueue: CueAction[] = []
-    for (const cue of this.cueArray) {
-      actionQueue.push(...cue.getActions(dict))
-    }
-    return actionQueue
+  private async sendCue(cue: ICue): Promise<void> {
+    const dict = this.oscClient.getDictionary()
+    const messages = cue.getActions(dict).map(({ address, args }) => (
+      { address: this.oscClient.getTargetAddress(address) ?? address, args }
+    ))
+    cue.id = await this.oscClient.sendAndWaitForReply(...messages)
   }
 
-  clearActions() {
-    this.cueArray.forEach(cue => cue.clearActions())
-  }
-
-  async pushUpdates(): Promise<void> {
-    await this.oscClient.sendCues(this)
-    Beat.log(`Pushed cues!`)
-  }
 }

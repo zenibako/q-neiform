@@ -54,6 +54,7 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     workspace: { address: "/workspace" },
     new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" },
     name: { address: "/name" },
+    mode: { address: "/mode" },
     update: { address: "/update" },
     selectedCues: {
       address: "/selectedCues", replyDataExample: `[

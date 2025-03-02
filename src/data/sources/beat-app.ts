@@ -1,9 +1,8 @@
 import { IMenuItem, Menu } from "../../domain/entities/menu"
 import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script"
 import ILogger from "../../domain/abstractions/i-logger"
-import { IOscClient, IOscServer } from "../../domain/abstractions/i-osc"
+import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
-import { ICue, ICues } from "../../domain/abstractions/i-cues"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -147,6 +146,20 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return !!this.oscServer
   }
 
+  getDictionary(): IOscDictionary {
+    if (!this.oscServer) {
+      throw new Error("Cannot access dictionary. No OSC server available.")
+    }
+    return this.oscServer.dict
+  }
+
+  getTargetAddress(address: string): string {
+    if (!this.oscServer) {
+      throw new Error("Cannot get target address. No OSC server available.")
+    }
+    return this.oscServer.getTargetAddress(address)
+  }
+
   loadServerConfiguration(): ServerConfiguration | null {
     return Beat.getDocumentSetting("server") as ServerConfiguration
   }
@@ -155,23 +168,12 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", server)
   }
 
-  async sendCues(cues: ICues): Promise<void> {
-    for await (const cue of cues) {
-      await this.sendCue(cue)
-    }
-  }
-
-  sendCue(cue: ICue): Promise<void> {
-    if (!this.oscServer) {
-      throw new Error("No OSC server connected.")
-    }
-    const { dict } = this.oscServer
-
+  sendAndWaitForReply(...messages: IOscMessage[]): Promise<string | null> {
     return new Promise((resolve, reject) => {
       Beat.custom.handleReply = (arg) => {
         Beat.log(`Received send reply in plugin!`)
         const [responseBodyString] = (arg as OSC.Message).args
-        const { status, address, data } = JSON.parse(responseBodyString as string)
+        const { status, data } = JSON.parse(responseBodyString as string)
 
         if (status === "denied") {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
@@ -184,30 +186,32 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           reject("Send errors")
         }
 
-        if (address.endsWith(dict.new.address)) {
-          cue.id = data
-          Beat.log(`Set ID ${data} on cue: ${cue.name}`)
-        }
-
-        cue.clearActions()
-        resolve()
+        resolve(data)
       }
 
-      const messages = cue.getActions(dict).map(({ address, args }) =>
-        `new OSC.Message(${[
-          `"${this.oscServer?.getTargetAddress(address) ?? address}"`,
-          ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
-        ].join(",")})`
-      )
-      Beat.log(`messages: ${messages}`)
-      this.window?.runJS(`sendMessage(new OSC.Bundle([${messages.join(",")}]))`)
-      if (cue.id) {
-        cue.clearActions()
-        resolve()
-      } else {
-        Beat.log(`Waiting for reply so ID can be set...`)
-      }
+      this.send(...messages)
     })
+  }
+
+  send(...messages: IOscMessage[]): void {
+    const messageStrings = messages.map(({ address, args }) =>
+      `new OSC.Message(${[
+        address,
+        ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
+      ].join(",")})`
+    )
+
+    Beat.log(`messageString: "${JSON.stringify(messageStrings, null, 1)}"`)
+
+    let jsString = "sendMessage"
+    if (messageStrings.length === 1) {
+      const [messageString] = messageStrings
+      jsString += `(${messageString})`
+    } else {
+      jsString += `(new OSC.Bundle([${messageStrings.join(",")}]))`
+    }
+
+    this.window?.runJS(jsString)
   }
 
   updateStatusDisplay(text: string) {

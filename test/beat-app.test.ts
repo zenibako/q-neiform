@@ -1,11 +1,7 @@
 import { mock } from 'jest-mock-extended'
-import { ICueApp } from '../src/domain/abstractions/i-cues'
 import BeatApp, { Mode } from '../src/data/sources/beat-app'
-import { IOscClient, IOscServer } from '../src/domain/abstractions/i-osc'
+import { IOscMessage, IOscDictionary, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
-import Cues from '../src/data/repositories/cues'
-import ILogger from '../src/domain/abstractions/i-logger'
-import { Line } from '../src/data/repositories/scripts'
 
 /*
 const beatApi: typeof Beat = {
@@ -19,7 +15,10 @@ const beatApi: typeof Beat = {
 */
 
 const oscServer = mock<IOscServer>()
-const dict = {
+const dict: IOscDictionary = {
+  workspace: {
+    address: "/workspace"
+  },
   connect: {
     address: "/connect"
   },
@@ -28,6 +27,9 @@ const dict = {
   },
   new: {
     address: "/new"
+  },
+  mode: {
+    address: "/mode"
   },
   reply: {
     address: "/reply"
@@ -64,73 +66,68 @@ mockBeatApi.assetAsString.mockReturnValue(`<span id="status">Connecting to bridg
 const mockCustom = mock<BeatCustomFunctions>()
 mockBeatApi.custom = mockCustom
 mockBeatApi.htmlWindow.mockImplementation(() => {
-  mockBeatApi.custom.handleOpen!(null)
+  mockBeatApi.custom.handleOpen!()
   mockBeatApi.custom.handleReply!(new OSC.Message(dict.connect.address, JSON.stringify(connectData)))
   return mockBeatHtmlWindow
 })
 mockBeatApi.log.mockImplementation((message) => console.log(message))
-
 globalThis.Beat = mockBeatApi
+
 const beat = new BeatApp(Mode.DEVELOPMENT)
-
-const mockCueApp = mock<ICueApp>()
-const mockLogger = mock<ILogger>()
-const mockOscClient = mock<IOscClient>()
-
-const line1 = "ALICE"
-const line2 = "What's up Bob?"
-const line3 = "BOB"
-const line4 = "Who are you, lady?"
 
 const docSettingsSpy = jest.spyOn(Beat, "getDocumentSetting")
 
-describe('Push cues with OSC client', () => {
+const mockMessages: IOscMessage[] = []
+
+describe('Send messages with OSC client', () => {
   beforeEach(async () => {
     docSettingsSpy.mockReturnValue(serverSettings)
     await beat.connect(oscServer)
 
-    mockBeatHtmlWindow.runJS.mockImplementation((address: string) => {
-      if (address.startsWith("sendMessage")) {
-        mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
-      }
+    const mockMessage1 = mock<IOscMessage>()
+    mockMessage1.address = "/test2"
+    mockMessage1.args = ["string"]
+    const mockMessage2 = mock<IOscMessage>()
+    mockMessage2.address = "/test2"
+    mockMessage2.args = [123]
+    mockMessages.push(mockMessage1, mockMessage2)
+  })
+
+  let replyCount = 0
+  describe('and wait for reply', () => {
+    beforeEach(() => {
+      mockBeatHtmlWindow.runJS.mockImplementation((jsString: string) => {
+        if (jsString.startsWith("send")) {
+          mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
+          replyCount++
+        }
+      })
+    })
+
+    afterEach(() => {
+      replyCount = 0
+    })
+
+    test('one message', async () => {
+      const reply = await beat.sendAndWaitForReply(mockMessages[0]!)
+      expect(reply).toBeTruthy()
+    })
+
+    test('two messages', async () => {
+      const replies = await beat.sendAndWaitForReply(...mockMessages)
+      expect(replies).toBeTruthy()
     })
   })
 
-  test('one cue', async () => {
-    const lines = [
-      { string: line1, typeAsString: "Character", range: { location: 0, length: line1.length } },
-      { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } }
-    ].map(line => new Line(line))
+  describe('and don\'t wait for a reply', () => {
+    test('one message', () => {
+      beat.send(mockMessages[0]!)
+      expect(replyCount).toBe(1)
+    })
 
-    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
-    cues.addFromLines(lines)
-    await beat.sendCues(cues)
-    
-    let cueCount = 0
-    for (const cue of cues) {
-      expect(cue.id).toBeTruthy()
-      cueCount++
-    }
-    expect(cueCount).toBe(1)
-  })
-
-  test('two cues', async () => {
-    const lines = [
-      { string: line1, typeAsString: "Character", range: { location: 0, length: line1.length } },
-      { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } },
-      { string: line3, typeAsString: "Character", range: { location: line2.length, length: line3.length } },
-      { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
-    ].map(line => new Line(line))
-
-    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
-    cues.addFromLines(lines)
-    await beat.sendCues(cues)
-
-    let cueCount = 0
-    for (const cue of cues) {
-      expect(cue.id).toBeTruthy()
-      cueCount++
-    }
-    expect(cueCount).toBe(2)
+    test('two messages', () => {
+      beat.send(...mockMessages)
+      expect(replyCount).toBe(2)
+    })
   })
 })
