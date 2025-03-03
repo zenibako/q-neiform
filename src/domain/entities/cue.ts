@@ -1,3 +1,4 @@
+import { action } from "@oclif/core/ux";
 import { Line } from "../../data/repositories/scripts";
 import { CueType } from "../../data/sources/qlab-app";
 import { ICue } from "../abstractions/i-cues";
@@ -24,26 +25,21 @@ export class Cue implements ICue {
     public id: string | null = null,
   ) { }
 
-  private propActions: CueAction[] = []
-
-  addPropAction(address: string, ...args: (string | number)[]) {
-    this.propActions.push(new CueAction(this.getQueryAddress() + address, args))
-  }
-
   getActions(dict: IOscDictionary) {
+    const actions: CueAction[] = []
     if (!this.id) {
-      return [ new CueAction(dict.new.address, [this.type]) ]
+      actions.push(new CueAction(dict.new.address, [this.type]))
     }
 
-    const propActions = [new CueAction(`${this.getQueryAddress()}${dict.name.address}`, [this.name])]
+    actions.push(new CueAction(this.getAddress(dict.name.address), [this.name]))
     if (this.mode) {
-      this.propActions.push(new CueAction(`${this.getQueryAddress()}${dict.mode.address}`, [this.mode]))
+      actions.push(new CueAction(this.getAddress(dict.mode.address), [this.mode]))
     }
-    return propActions
+    return actions
   }
 
-  getQueryAddress() {
-    return `/cue/${this.id?.length ? this.id : "selected"}`
+  getAddress(path: string) {
+    return `/cue/${(this.id?.length ? this.id : "selected") + path}`
   }
 
   /*

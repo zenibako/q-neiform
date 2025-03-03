@@ -3,6 +3,7 @@ import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-
 import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
+import BeatWebSocketWindow from "../transfer-objects/beat-window"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -16,7 +17,7 @@ type ServerConfiguration = {
 }
 
 export default class BeatApp implements IScriptApp, IOscClient, ILogger {
-  private window?: Beat.Window
+  private window?: BeatWebSocketWindow
   private oscServer?: IOscServer
 
   constructor(private mode: Mode) {
@@ -33,9 +34,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       // Beat.log(Beat.currentLine.characterName())
       Beat.log(`Selection: loc = ${location} / len = ${length}`)
       const cueId = Beat.currentLine.getCustomData("cue_id")
-      this.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
+      this.window?.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
     })
-
   }
 
   log(message: string) {
@@ -83,10 +83,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       this.saveServerConfiguration(serverConfig)
     }
 
-    const ui = Beat.assetAsString("ui.html")
-    ui.replace(WS_DEFAULT_ADDRESS, serverConfig.host as string)
-    ui.replace(WS_DEFAULT_PORT, serverConfig.port as string)
-
     const connectAddress = oscServer.dict.connect?.address
     return new Promise((resolve, reject) => {
       Beat.custom = {
@@ -118,14 +114,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
             }
             this.saveServerConfiguration(serverConfig)
             oscServer.id = workspace_id
-            this.updateStatusDisplay(`Connected to QLab server on ${serverConfig.host}:${serverConfig.port}.`)
+            this.window?.updateStatusDisplay(`Connected to QLab server on ${serverConfig.host}:${serverConfig.port}.`)
             this.oscServer = oscServer
           }
           resolve("Received reply")
         },
         handleError: (arg) => {
           const [error, status] = arg as [string, number]
-          Beat.log(`Received error: ${error}`)
+          Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
           const { title, message } = this.getAlertInfo(status)
           Beat.alert(title, message)
           this.saveServerConfiguration({ host: null, port: null })
@@ -134,11 +130,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         }
       }
 
-      this.window = Beat.htmlWindow(ui, 300, 50, () => {
-        Beat.log("Window closed. Disconnecting.")
-        this.disconnect()
-      })
-      this.window.gangWithDocumentWindow()
+      this.window = new BeatWebSocketWindow(serverConfig.host as string, serverConfig.port as string)
     })
   }
 
@@ -177,12 +169,12 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
         if (status === "denied") {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
-          this.updateStatusDisplay("Access denied.")
+          this.window?.updateStatusDisplay("Access denied.")
           reject("Access revoked. Need to reopen plugin.")
         }
 
         if (status === "error") {
-          this.updateStatusDisplay("Errors while sending. Check logs for details.")
+          this.window?.updateStatusDisplay("Errors while sending. Check logs for details.")
           reject("Send errors")
         }
 
@@ -194,33 +186,11 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   send(...messages: IOscMessage[]): void {
-    const messageStrings = messages.map(({ address, args }) =>
-      `new OSC.Message(${[
-        address,
-        ...(args.map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`))
-      ].join(",")})`
-    )
-
-    Beat.log(`messageString: "${JSON.stringify(messageStrings, null, 1)}"`)
-
-    let jsString = "sendMessage"
-    if (messageStrings.length === 1) {
-      const [messageString] = messageStrings
-      jsString += `(${messageString})`
-    } else {
-      jsString += `(new OSC.Bundle([${messageStrings.join(",")}]))`
-    }
-
-    this.window?.runJS(jsString)
-  }
-
-  updateStatusDisplay(text: string) {
-    this.window?.runJS(`updateStatusDisplay("${text}")`)
+    this.window?.send(...messages)
   }
 
   disconnect() {
-    this.window?.runJS(`osc.close()`)
-    Beat.end()
+    this.window?.close()
   }
 
   setLineData(range: IRange, key: string, value: string | null) {
@@ -250,9 +220,13 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       return Beat.menuItem(title, keyboardShortcuts ?? [], () => useCase.execute())
     })
 
+    const testMessage = { address: this.getTargetAddress("/selectedCues"), args: [] }
     const beatMenu = Beat.menu(menu.title, menuItems)
     beatMenu.addItem(Beat.separatorMenuItem())
-    beatMenu.addItem(Beat.menuItem("Disconnect", ["cmd", "q"], () => this.disconnect()))
+    beatMenu.addItem(Beat.menuItem("Disconnect", ["ctrl", "q"], () => this.disconnect()))
+    beatMenu.addItem(Beat.separatorMenuItem())
+    beatMenu.addItem(Beat.menuItem("Test Send", ["ctrl", "s"], () => this.send(testMessage, testMessage)))
+    beatMenu.addItem(Beat.menuItem("Test Send and Reply", ["ctrl", "r"], async () => this.sendAndWaitForReply(testMessage, testMessage)))
     Beat.log("Mounted.")
   }
 
