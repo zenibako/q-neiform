@@ -114,7 +114,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
             }
             this.saveServerConfiguration(serverConfig)
             oscServer.id = workspace_id
-            this.window?.updateStatusDisplay(`Connected to QLab server on ${serverConfig.host}:${serverConfig.port}.`)
+            this.window?.updateStatusDisplay(`Connected to QLab server.`)
             this.oscServer = oscServer
           }
           resolve("Received reply")
