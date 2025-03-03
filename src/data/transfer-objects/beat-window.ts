@@ -45,13 +45,17 @@ export default class BeatWebSocketWindow {
     this.window.gangWithDocumentWindow()
   }
 
-  send(...messages: IOscMessage[]): void {
-    const messageStrings = messages.map(({ address, args }) =>
-      `new OSC.Message(${[address, ...args]
-        .map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`)
-        .join(",")}
-      )`
-    )
+  send(messages: IOscMessage[], customFunctions: Beat.CustomFunctions): void {
+    Beat.custom = {
+      handleReply: () => Beat.log("Reply received, but no handler was assigned."),
+      handleError: () => Beat.log("Error received, but no handler was assigned."),
+      ...customFunctions
+    }
+
+    const messageStrings = messages.map(({ address, args }) => {
+      const messageArgs = [address, ...args].map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`)
+      return `new OSC.Message(${messageArgs.join(",")})`
+    })
 
     let jsString = "sendMessage"
     if (messageStrings.length === 1) {
@@ -70,7 +74,6 @@ export default class BeatWebSocketWindow {
   }
 
   close() {
-    this.window.runJS(`osc.close()`)
     this.window.close()
     Beat.end()
   }
