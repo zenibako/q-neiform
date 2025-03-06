@@ -3,16 +3,7 @@ import BeatApp, { Mode } from '../src/data/sources/beat-app'
 import { IOscMessage, IOscDictionary, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
 
-/*
-const beatApi: typeof Beat = {
-  openConsole: () => {},
-  log: (message) => { console.log(message) },
-  lines: jest.fn(),
-  parser: jest.fn(),
-  outline: jest.fn(),
-  scenes: jest.fn(),
-}
-*/
+const mode = Mode.DEVELOPMENT
 
 const oscServer = mock<IOscServer>()
 const dict: IOscDictionary = {
@@ -70,14 +61,20 @@ mockBeatApi.htmlWindow.mockImplementation(() => {
   mockBeatApi.custom.handleReply!(new OSC.Message(dict.connect.address, JSON.stringify(connectData)))
   return mockBeatHtmlWindow
 })
-mockBeatApi.log.mockImplementation((message) => console.log(message))
+
+mockBeatApi.log.mockImplementation((message) => {
+  if (mode !== Mode.DEVELOPMENT) {
+    return
+  }
+  console.log(message)
+})
 globalThis.Beat = mockBeatApi
 
-const beat = new BeatApp(Mode.DEVELOPMENT)
+const beat = new BeatApp(mode)
 
 const docSettingsSpy = jest.spyOn(Beat, "getDocumentSetting")
 
-const mockMessages: IOscMessage[] = []
+let messagesToSend: IOscMessage[] = []
 
 describe('Send messages with OSC client', () => {
   beforeEach(async () => {
@@ -85,48 +82,75 @@ describe('Send messages with OSC client', () => {
     await beat.connect(oscServer)
 
     const mockMessage1 = mock<IOscMessage>()
-    mockMessage1.address = "/test2"
+    mockMessage1.address = "/test1"
     mockMessage1.args = ["string"]
     const mockMessage2 = mock<IOscMessage>()
     mockMessage2.address = "/test2"
     mockMessage2.args = [123]
-    mockMessages.push(mockMessage1, mockMessage2)
+    messagesToSend = [mockMessage1, mockMessage2]
   })
+
+  let replyMessage: OSC.Message | null
+  let replyError: [string, number] | null
 
   let replyCount = 0
   describe('and wait for reply', () => {
     beforeEach(() => {
       mockBeatHtmlWindow.runJS.mockImplementation((jsString: string) => {
-        if (jsString.startsWith("send")) {
-          mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
-          replyCount++
+        if (!jsString.startsWith("send")) {
+          return
         }
+
+        if (replyMessage) {
+          mockBeatApi.custom.handleReply!(replyMessage)
+        }
+
+        if (replyError) {
+          mockBeatApi.custom.handleError!(replyError)
+        }
+        
+        replyCount++
       })
     })
 
     afterEach(() => {
+      replyMessage = null
+      replyError = null
       replyCount = 0
     })
 
     test('one message', async () => {
-      const reply = await beat.sendAndWaitForReply(mockMessages[0]!)
+      replyMessage = new OSC.Message(replyNewAddress, JSON.stringify(replyNewData))
+      const reply = await beat.sendAndWaitForReply(messagesToSend[0]!)
       expect(reply).toBeTruthy()
     })
 
     test('two messages', async () => {
-      const replies = await beat.sendAndWaitForReply(...mockMessages)
+      replyMessage = new OSC.Message(replyNewAddress, JSON.stringify(replyNewData))
+      const replies = await beat.sendAndWaitForReply(...messagesToSend)
       expect(replies).toBeTruthy()
+    })
+
+    test('error', async () => {
+      const error = "Error occurred."
+      replyError = [error, OSC.STATUS.IS_OPEN]
+      try {
+        await beat.sendAndWaitForReply(...messagesToSend)
+        fail()
+      } catch(e) {
+        expect(e).toBe(error)
+      }
     })
   })
 
   describe('and don\'t wait for a reply', () => {
     test('one message', () => {
-      beat.send(mockMessages[0]!)
+      beat.send(messagesToSend[0]!)
       expect(replyCount).toBe(1)
     })
 
     test('two messages', () => {
-      beat.send(...mockMessages)
+      beat.send(...messagesToSend)
       expect(replyCount).toBe(2)
     })
   })
