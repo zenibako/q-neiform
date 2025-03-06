@@ -12,7 +12,7 @@ export default class BeatWebSocketWindow {
 <script type="text/javascript" src="lib/osc.min.js"></script>
 <script type="text/javascript">
   function updateStatusDisplay(message) {
-    Beat.log("Updating status display: " + message)
+    Beat.log(message)
     document.querySelector("#status").textContent = message
   }
 
@@ -22,10 +22,12 @@ export default class BeatWebSocketWindow {
 
   function sendMessage(message, replyAddress = "*") {
     const replyListener = osc.on(replyAddress, (reply) => {
-      osc.off(replyAddress, replyListener)
+      // osc.off(replyAddress, replyListener)
+      Beat.log("Reply received in window.")
       Beat.call((arg) => Beat.custom.handleReply(arg), reply)
     })
     osc.send(message)
+    Beat.log("Message sent.")
   }
 
   function throwError(error) {
@@ -47,8 +49,8 @@ export default class BeatWebSocketWindow {
 
   send(messages: IOscMessage[], customFunctions: Beat.CustomFunctions): void {
     Beat.custom = {
-      handleReply: () => Beat.log("Reply received, but no handler was assigned."),
-      handleError: () => Beat.log("Error received, but no handler was assigned."),
+      handleReply: () => Beat.log("No reply handler was assigned."),
+      handleError: () => Beat.log("No error handler was assigned."),
       ...customFunctions
     }
 

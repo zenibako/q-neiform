@@ -26,13 +26,13 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     }
 
 
-    Beat.onSelectionChange((location, length) => {
+    Beat.onSelectionChange(() => {
       if (!this.oscServer) {
         return
       }
 
       // Beat.log(Beat.currentLine.characterName())
-      Beat.log(`Selection: loc = ${location} / len = ${length}`)
+      // Beat.log(`Selection: loc = ${location} / len = ${length}`)
       const cueId = Beat.currentLine.getCustomData("cue_id")
       this.window?.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
     })
@@ -232,7 +232,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     beatMenu.addItem(Beat.separatorMenuItem())
     beatMenu.addItem(Beat.menuItem("Test Send", ["ctrl", "s"], () => this.send(testMessage, testMessage)))
     beatMenu.addItem(Beat.menuItem("Test Send and Reply", ["ctrl", "r"], async () => this.sendAndWaitForReply(testMessage, testMessage)))
-    Beat.log("Mounted.")
+    Beat.log("Mounted menu items.")
   }
 
   getCurrentLine() {
