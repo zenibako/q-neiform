@@ -76,7 +76,7 @@ export default class BeatWebSocketWindow {
   }
 
   close() {
-    this.window.close()
+    this.window?.close()
     Beat.end()
   }
 }

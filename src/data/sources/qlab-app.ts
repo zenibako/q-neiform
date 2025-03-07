@@ -1,6 +1,3 @@
-import OscBundle from "../transfer-objects/osc-bundle";
-// import { ICueApp, ICueCommandBundle } from "../../domain/abstractions/i-cues";
-
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
@@ -91,26 +88,62 @@ export class QLabWorkspace implements ICueApp, IOscServer {
         reject('No OSC server set')
         return
       }
-      this.osc.on("*", (message: OSC.Message) => {
-        const { address } = message
-        if (address.includes(this.dict.reply.address)) {
-          this.logger.log(`Forwarding reply to WebSocket client:\n${this.logOscMessage(message)}`)
-          if (address.includes(this.dict.connect.address)) {
-            resolve("Successfully connected.")
+
+      const connectReplyAddress = this.dict.reply.address + this.dict.connect.address
+      const connectReplyListener = this.osc.on(connectReplyAddress, (message: OSC.Message) => {
+        this.osc?.off(connectReplyAddress, connectReplyListener)
+        try {
+          const { args } = message
+          if (!args?.length) {
+            throw new Error(`No args returned.`)
           }
-        } else {
-          this.logger.log(`Received message for UDP server:\n${this.logOscMessage(message)}`)
+          this.handleConnectReply(args[0] as string)
+          this.listenForMessages()
+          resolve("Successfully connected.")
+        } catch (e) {
+          reject((e as Error)?.message ?? e)
         }
       })
       this.osc.on("error", (error: unknown) => {
+        this.logger.log(`Error from bridge: ${JSON.stringify(error, null, 1)}`)
         reject(error)
       })
       this.osc.open()
     })
   }
 
+  handleConnectReply(replyResponse: string) {
+    const { workspace_id, data } = JSON.parse(replyResponse)
+
+    const splitData = (data as string)?.split(":")
+    if (splitData?.length < 2) {
+      throw new Error("Password was incorrect or did not provide permissions. Please try again.")
+    }
+
+    this.id = workspace_id
+  }
+
+  private listenForMessages() {
+    const wildcard = "*"
+    const workspaceTargetAddress = this.getTargetAddress("/" + wildcard)
+    this.osc?.on(workspaceTargetAddress, (message: OSC.Message) => {
+      this.logger.log(`Sending message to UDP client:`)
+    })
+    this.osc?.on(this.dict.reply.address + workspaceTargetAddress, (message: OSC.Message) => {
+      this.logger.log(`Forwarding reply to WebSocket client`)
+    })
+    this.osc?.on(wildcard, (message: OSC.Message) => {
+      this.logger.log(`\n${this.logOscMessage(message)}`)
+    })
+    this.logger.log(`Listening for messages on:\n - ${workspaceTargetAddress}\n - ${this.dict.reply.address + workspaceTargetAddress}`)
+  }
+
   private logOscMessage({ address, args }: OSC.Message) {
-    return ` ├ address: ${address}${args?.length ? "\n └ args: " + args : ""}`
+    if (!args.length) {
+      return ` └ address: ${address}`
+    } else {
+      return ` ├ address: ${address}\n └ args: ${args}`
+    }
   }
 
   getTargetAddress(address?: string): string {
@@ -119,37 +152,23 @@ export class QLabWorkspace implements ICueApp, IOscServer {
       workspaceAddress += address
     }
 
-    return workspaceAddress 
+    return workspaceAddress
   }
 
-  // private queue: OscBundle[] = []
-  // private mappingByCueNumber: Record<number, string> = {}
-  /*
-  async push(...bundles: ICueCommandBundle[]) {
-    console.log(bundles)
-    return []
-  }
-
-  async pull(...ids: string[]) {
-    console.log(ids)
-    return []
-  }
-
-  async select() {
-  }
-  */
-
-  private async send(...bundles: OscBundle[]): Promise<string[]> {
-    return Promise.all(
-      bundles.map(async bundle => {
-        if (!bundle.packets.length) {
-          throw new Error('No packets set.')
-        }
-
-        //await this.osc!.send(bundle)
-
-        return `processed all replies for ${bundle.phase}`
-      })
-    )
-  }
+// private queue: OscBundle[] = []
+// private mappingByCueNumber: Record<number, string> = {}
+/*
+async push(...bundles: ICueCommandBundle[]) {
+  console.log(bundles)
+  return []
+}
+ 
+async pull(...ids: string[]) {
+  console.log(ids)
+  return []
+}
+ 
+async select() {
+}
+*/
 }

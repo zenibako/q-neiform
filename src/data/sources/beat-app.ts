@@ -101,24 +101,23 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           return { address: connectAddress, password }
         },
         handleReply: (arg) => {
-          const reply = arg as OSC.Message
+          const { args } = arg as IOscMessage
           Beat.log(`Received connect reply in plugin!`)
-          if (!reply.args?.length) {
-            reject("No args returned")
-          }
-          const { workspace_id, data } = JSON.parse(reply.args[0] as string)
-          const splitData = (data as string).split(":")
-          if (splitData.length < 2) {
-            Beat.alert("Access Error", "Password was incorrect or did not provide permissions. Please try again.")
+          try {
+            if (!args?.length) {
+              throw new Error(`No args returned.`)
+            }
+            oscServer.handleConnectReply(args[0] as string)
+            this.saveServerConfiguration(serverConfig)
+            this.window?.updateStatusDisplay(`Connected to QLab server.`)
+            this.oscServer = oscServer
+            resolve("Received reply")
+          } catch (e) {
+            Beat.alert("Access Error", e as string)
             serverConfig.password = null
             this.saveServerConfiguration(serverConfig)
-            reject("Wrong password")
+            reject(e as string)
           }
-          this.saveServerConfiguration(serverConfig)
-          oscServer.id = workspace_id
-          this.window?.updateStatusDisplay(`Connected to QLab server.`)
-          this.oscServer = oscServer
-          resolve("Received reply")
         },
         handleError: (arg) => {
           const [error, status] = arg as [string, number]
