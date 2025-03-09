@@ -1,5 +1,6 @@
 import { Args, Command, Flags } from '@oclif/core'
 import { QLabWorkspace } from '../../../data/sources/qlab-app'
+import OSC from 'osc-js'
 // import Cues from '../../../data/repositories/cues'
 
 export default class BridgeServe extends Command {
@@ -21,20 +22,25 @@ export default class BridgeServe extends Command {
   }
 
   public async run(): Promise<void> {
-    const { args, flags } = await this.parse(BridgeServe)
-    const qlab = new QLabWorkspace(this)
+    const { flags: { host = "localhost", port = 53000 } } = await this.parse(BridgeServe)
+    const osc = new OSC({
+      plugin: new OSC.BridgePlugin({
+        udpClient: { port, host },      // Target QLab's port
+        udpServer: { port: port + 1 },  // This bridge's port
+        receiver: "udp"
+      })
+    })
+
+    const qlab = new QLabWorkspace(osc, this)
     // const cues = new Cues(this, qlab, this)
 
     try {
-      const connectionMessage = await qlab.bridge(flags.host, flags.port)
+      const connectionMessage = await qlab.connect()
       this.log(connectionMessage)
+      qlab.listen()
     } catch (e) {
       this.log("Error: " + ((e as Error).message ?? e))
       throw e
-    }
-
-    if (args.file && flags.force) {
-      this.log(`you input --force and --file: ${args.file}`)
     }
   }
 }

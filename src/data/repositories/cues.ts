@@ -7,7 +7,7 @@ import { Line, LineType } from "./scripts";
 export default class Cues implements ICues {
   private cueArray: ICue[] = []
 
-  constructor(private cueApp: ICueApp, private oscClient: IOscClient, private logger: ILogger) { }
+  constructor(private oscClient: IOscClient, private logger: ILogger) { }
 
   *[Symbol.iterator](): IterableIterator<ICue> {
     for (let i = 0; i < this.cueArray.length; ++i) {
@@ -17,10 +17,6 @@ export default class Cues implements ICues {
       }
       yield cue
     }
-  }
-
-  getSourceName(): string {
-    return this.cueApp.name
   }
 
   async getCueList(): Promise<object[]> {

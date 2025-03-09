@@ -1,0 +1,96 @@
+import { mock } from 'jest-mock-extended'
+import { IOscMessage } from '../src/domain/abstractions/i-osc'
+import OSC from 'osc-js'
+import { OSC_DICTIONARY, QLabWorkspace } from '../src/data/sources/qlab-app'
+import ILogger from '../src/domain/abstractions/i-logger'
+import { Server } from 'https'
+import { WebSocket } from 'ws'
+import { Socket } from 'dgram'
+
+//const mockHttpsServer = mock<Server>()
+//const mockWsServer = mock<WebSocket>()
+//const mockUdpServer = mock<Socket>()
+/*
+jest.mock('https', () => ({
+  Server: jest.fn().mockImplementation(() => mockHttpsServer)
+}));
+
+jest.mock('ws', () => ({
+  WebSocketServer: jest.fn().mockImplementation(() => mockWsServer)
+}));
+
+jest.mock('dgram', () => ({
+  default: {
+    createSocket: jest.fn().mockImplementation(() => mockUdpServer)
+  }
+}));
+*/
+
+
+const connectData = {
+  workspace_id: "12345",
+  data: "ok:view|edit|control"
+}
+
+const replyConnectAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.connect.address
+const replyNewAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.new.address
+const replyNewData = {
+  status: "ok",
+  address: replyNewAddress,
+  data: "12345"
+}
+
+const mockLogger = mock<ILogger>()
+mockLogger.log.mockImplementation((message) => {
+  console.log(message)
+})
+
+
+let qlab: QLabWorkspace
+let osc: OSC
+
+const mockBridgePlugin = mock<OSC.BridgePlugin>()
+
+let messagesToSend: IOscMessage[] = []
+let connectResponse
+const replyMessage = new OSC.Message(replyConnectAddress, JSON.stringify(connectData))
+
+describe('Bridge WS client with UDP server', () => {
+  beforeEach(async () => {
+    const mockMessage1 = mock<IOscMessage>()
+    mockMessage1.address = "/test1"
+    mockMessage1.args = ["string"]
+    const mockMessage2 = mock<IOscMessage>()
+    mockMessage2.address = "/test2"
+    mockMessage2.args = [123]
+    messagesToSend = [mockMessage1, mockMessage2]
+
+    mockBridgePlugin.open.mockImplementation(() => osc.send(replyMessage))
+
+    const onSpy = jest.spyOn(OSC.prototype, "on")
+    onSpy.mockImplementationOnce((event, callback) => {
+      expect(event).toBe("open")
+      callback()
+      return 1
+    })
+    onSpy.mockImplementationOnce((event, callback) => {
+      expect(event).toBe(replyConnectAddress)
+      callback(replyMessage)
+      return 2
+    })
+
+
+    osc = new OSC({ plugin: mockBridgePlugin })
+
+    qlab = new QLabWorkspace(osc, mockLogger)
+    connectResponse = await qlab.connect()
+    expect(connectResponse).toBe("Successfully connected.")
+  })
+
+
+  describe('and wait for reply', () => {
+    test('one message', async () => {
+      osc.send(new OSC.Message("/test1"))
+    })
+  })
+})

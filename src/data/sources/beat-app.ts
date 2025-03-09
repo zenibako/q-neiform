@@ -4,6 +4,7 @@ import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
 import BeatWebSocketWindow from "../transfer-objects/beat-window"
+import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-app"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -79,7 +80,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.alert(title, message)
   }
 
-  async connect(oscServer: IOscServer): Promise<string> {
+  async connect(): Promise<string> {
     let serverConfig = this.loadServerConfiguration()
     if (!serverConfig?.host || !serverConfig?.port) {
       const { address: modalHost, port: modalPort } = this.promptUserForServerInfo()
@@ -89,28 +90,28 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       this.saveServerConfiguration(serverConfig)
     }
 
-    const connectAddress = oscServer.dict.connect?.address
     return new Promise((resolve, reject) => {
       Beat.custom = {
-        handleOpen: () => {
+        handleOpen: (osc) => {
           let { password } = serverConfig
           if (!password) {
             password = this.promptUserForPassword()
             serverConfig.password = password
           }
-          return { address: connectAddress, password }
+          this.oscServer = new QLabWorkspace(osc as OSC, this)
+          const { connect } = OSC_DICTIONARY
+          return { address: connect.address, password }
         },
-        handleReply: (arg) => {
-          const { args } = arg as IOscMessage
+        handleReply: (reply) => {
+          const { args } = reply as IOscMessage
           Beat.log(`Received connect reply in plugin!`)
           try {
             if (!args?.length) {
               throw new Error(`No args returned.`)
             }
-            oscServer.handleConnectReply(args[0] as string)
+            this.oscServer?.handleConnectReply(args[0] as string)
             this.saveServerConfiguration(serverConfig)
             this.window?.updateStatusDisplay(`Connected to QLab server.`)
-            this.oscServer = oscServer
             resolve("Received reply")
           } catch (e) {
             Beat.alert("Access Error", e as string)
@@ -133,10 +134,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   getDictionary(): IOscDictionary {
-    if (!this.oscServer) {
-      throw new Error("Cannot access dictionary. No OSC server available.")
-    }
-    return this.oscServer.dict
+    return OSC_DICTIONARY
   }
 
   getTargetAddress(address: string): string {

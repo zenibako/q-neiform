@@ -1,32 +1,13 @@
 import { mock } from 'jest-mock-extended'
 import BeatApp, { Mode } from '../src/data/sources/beat-app'
-import { IOscMessage, IOscDictionary, IOscServer } from '../src/domain/abstractions/i-osc'
+import { IOscMessage, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
+import { OSC_DICTIONARY } from '../src/data/sources/qlab-app'
 
 const mode = Mode.DEVELOPMENT
 
 const oscServer = mock<IOscServer>()
-const dict: IOscDictionary = {
-  workspace: {
-    address: "/workspace"
-  },
-  connect: {
-    address: "/connect"
-  },
-  name: {
-    address: "/name"
-  },
-  new: {
-    address: "/new"
-  },
-  mode: {
-    address: "/mode"
-  },
-  reply: {
-    address: "/reply"
-  }
-}
-Object.assign(oscServer, { dict })
+oscServer.getDictionary.mockReturnValue(OSC_DICTIONARY)
 
 const serverSettings = {
   host: "localhost",
@@ -39,7 +20,8 @@ const connectData = {
   data: "ok:view|edit|control"
 }
 
-const replyNewAddress = dict.reply.address + dict.new.address
+const { reply: replyDict, new: newDict } = OSC_DICTIONARY
+const replyNewAddress = replyDict.address + newDict.address
 const replyNewData = {
   status: "ok",
   address: replyNewAddress,
@@ -57,8 +39,8 @@ mockBeatApi.assetAsString.mockReturnValue(`<span id="status">Connecting to bridg
 const mockCustom = mock<BeatCustomFunctions>()
 mockBeatApi.custom = mockCustom
 mockBeatApi.htmlWindow.mockImplementation(() => {
-  mockBeatApi.custom.handleOpen!()
-  mockBeatApi.custom.handleReply!(new OSC.Message(dict.connect.address, JSON.stringify(connectData)))
+  mockBeatApi.custom.handleOpen!(new OSC())
+  mockBeatApi.custom.handleReply!(new OSC.Message(replyDict.address, JSON.stringify(connectData)))
   return mockBeatHtmlWindow
 })
 
@@ -79,7 +61,7 @@ let messagesToSend: IOscMessage[] = []
 describe('Send messages with OSC client', () => {
   beforeEach(async () => {
     docSettingsSpy.mockReturnValue(serverSettings)
-    await beat.connect(oscServer)
+    await beat.connect()
 
     const mockMessage1 = mock<IOscMessage>()
     mockMessage1.address = "/test1"

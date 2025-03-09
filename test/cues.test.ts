@@ -50,7 +50,7 @@ describe('Push cues with OSC client', () => {
       { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } }
     ].map(line => new Line(line))
 
-    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
+    const cues = new Cues(mockOscClient, mockLogger)
     cues.addFromLines(lines)
     await cues.push()
     
@@ -70,7 +70,7 @@ describe('Push cues with OSC client', () => {
       { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
     ].map(line => new Line(line))
 
-    const cues = new Cues(mockCueApp, mockOscClient, mockLogger)
+    const cues = new Cues(mockOscClient, mockLogger)
     cues.addFromLines(lines)
     await cues.push()
 

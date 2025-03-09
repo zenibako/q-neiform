@@ -36,25 +36,16 @@ export type CueType =
   "cuecart" |
   "cue cart"
 
-export class QLabWorkspace implements ICueApp, IOscServer {
-  public readonly name = "QLab"
-
-  public id?: string
-
-  public osc?: OSC
-
-  constructor(private logger: ILogger) { }
-
-  public readonly dict: IOscDictionary = {
-    connect: { address: "/connect" },
-    reply: { address: "/reply" },
-    workspace: { address: "/workspace" },
-    new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" },
-    name: { address: "/name" },
-    mode: { address: "/mode" },
-    update: { address: "/update" },
-    selectedCues: {
-      address: "/selectedCues", replyDataExample: `[
+export const OSC_DICTIONARY: IOscDictionary = {
+  connect: { address: "/connect" },
+  reply: { address: "/reply" },
+  workspace: { address: "/workspace" },
+  new: { address: "/new", replyDataExample: "3434B56C-214F-4855-8185-E05B9E7F50A2" },
+  name: { address: "/name" },
+  mode: { address: "/mode" },
+  update: { address: "/update" },
+  selectedCues: {
+    address: "/selectedCues", replyDataExample: `[
         {
           "number": "{string}",
           "uniqueID": {string},
@@ -68,37 +59,32 @@ export class QLabWorkspace implements ICueApp, IOscServer {
           "armed": true|false,
         }
       ]` }
-  }
+}
 
-  bridge(host: string = "localhost", port: number = 53000): Promise<string> {
-    this.osc = new OSC({
-      plugin: new OSC.BridgePlugin({
-        udpClient: { port, host },      // Target QLab's port
-        udpServer: { port: port + 1 },  // This bridge's port
-        receiver: "udp"
-      })
-    })
+export class QLabWorkspace implements ICueApp, IOscServer {
+  public readonly name = "QLab"
 
+  public id?: string
+
+  constructor(private osc: OSC, private logger: ILogger) { }
+
+  connect(): Promise<string> {
     this.osc.on("open", () => {
       this.logger.log(`Opened WebSocket bridge port on localhost:8080. Ready to accept OSC messages.`)
     })
 
     return new Promise((resolve, reject) => {
-      if (!this.osc) {
-        reject('No OSC server set')
-        return
-      }
-
-      const connectReplyAddress = this.dict.reply.address + this.dict.connect.address
-      const connectReplyListener = this.osc.on(connectReplyAddress, (message: OSC.Message) => {
-        this.osc?.off(connectReplyAddress, connectReplyListener)
+      const { reply, connect } = OSC_DICTIONARY
+      const connectReplyAddress = reply.address + connect.address
+      this.osc.on(connectReplyAddress, (message: OSC.Message) => {
+      //const connectReplyListener = this.osc.on(connectReplyAddress, (message: OSC.Message) => {
+        // this.osc.off(connectReplyAddress, connectReplyListener)
         try {
           const { args } = message
           if (!args?.length) {
             throw new Error(`No args returned.`)
           }
           this.handleConnectReply(args[0] as string)
-          this.listenForMessages()
           resolve("Successfully connected.")
         } catch (e) {
           reject((e as Error)?.message ?? e)
@@ -112,6 +98,30 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     })
   }
 
+  listen() {
+    const { reply } = OSC_DICTIONARY
+    const wildcard = "*"
+    const workspaceTargetAddress = this.getTargetAddress("/" + wildcard)
+    this.osc.on(workspaceTargetAddress, () => {
+      this.logger.log(`Sending message to UDP client:`)
+    })
+    this.osc.on(reply.address + workspaceTargetAddress, () => {
+      this.logger.log(`Forwarding reply to WebSocket client:`)
+    })
+    this.osc.on(wildcard, (message: OSC.Message) => {
+      this.logger.log(`\n${this.logOscMessage(message)}`)
+    })
+    this.logger.log(`Listening for messages on:\n - ${workspaceTargetAddress}\n - ${reply.address + workspaceTargetAddress}`)
+  }
+
+  send(message: OSC.Message | OSC.Bundle) {
+    this.osc.send(message)
+  }
+
+  getDictionary(): IOscDictionary {
+    return OSC_DICTIONARY
+  }
+
   handleConnectReply(replyResponse: string) {
     const { workspace_id, data } = JSON.parse(replyResponse)
 
@@ -123,21 +133,6 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     this.id = workspace_id
   }
 
-  private listenForMessages() {
-    const wildcard = "*"
-    const workspaceTargetAddress = this.getTargetAddress("/" + wildcard)
-    this.osc?.on(workspaceTargetAddress, (message: OSC.Message) => {
-      this.logger.log(`Sending message to UDP client:`)
-    })
-    this.osc?.on(this.dict.reply.address + workspaceTargetAddress, (message: OSC.Message) => {
-      this.logger.log(`Forwarding reply to WebSocket client`)
-    })
-    this.osc?.on(wildcard, (message: OSC.Message) => {
-      this.logger.log(`\n${this.logOscMessage(message)}`)
-    })
-    this.logger.log(`Listening for messages on:\n - ${workspaceTargetAddress}\n - ${this.dict.reply.address + workspaceTargetAddress}`)
-  }
-
   private logOscMessage({ address, args }: OSC.Message) {
     if (!args.length) {
       return ` └ address: ${address}`
@@ -147,12 +142,13 @@ export class QLabWorkspace implements ICueApp, IOscServer {
   }
 
   getTargetAddress(address?: string): string {
-    let workspaceAddress = `${this.dict.workspace.address}/${this.id}`
+    const { workspace } = OSC_DICTIONARY
+    let targetAddress = `${workspace.address}/${this.id}`
     if (address) {
-      workspaceAddress += address
+      targetAddress += address
     }
 
-    return workspaceAddress
+    return targetAddress
   }
 
 // private queue: OscBundle[] = []

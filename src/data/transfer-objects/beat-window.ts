@@ -36,7 +36,7 @@ export default class BeatWebSocketWindow {
 
   updateStatusDisplay("Connecting to bridge at ${host}:${port}...")
   osc.on("error", (error) => throwError(error))
-  osc.on("open", () => Beat.callAndWait("Beat.custom.handleOpen()").then(
+  osc.on("open", () => Beat.callAndWait((arg) => Beat.custom.handleOpen(arg), osc).then(
       ({address, password}) => sendMessage(new OSC.Message(address, password)),
       (error) => throwError(error)
     )
@@ -80,3 +80,4 @@ export default class BeatWebSocketWindow {
     Beat.end()
   }
 }
+

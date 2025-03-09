@@ -24,8 +24,8 @@ export interface IOscDictionary {
 
 export interface IOscServer {
   id?: string
-  bridge(host: string, port: number): Promise<string>
-  dict: IOscDictionary
+  connect(): Promise<string>
+  getDictionary(): IOscDictionary
   handleConnectReply(replyResponse: string): void
   getTargetAddress(address?: string): string
 }

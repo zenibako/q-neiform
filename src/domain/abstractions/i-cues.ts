@@ -8,7 +8,6 @@ export interface ICueApp {
 }
 
 export interface ICues extends Iterable<ICue> {
-  getSourceName(): string,
 }
 
 export interface ICue {
