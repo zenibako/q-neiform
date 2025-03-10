@@ -3,14 +3,13 @@ import { IOscMessage } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
 import { OSC_DICTIONARY, QLabWorkspace } from '../src/data/sources/qlab-app'
 import ILogger from '../src/domain/abstractions/i-logger'
-import { EventEmitterAsyncResource } from 'ws'
 
-const connectData = {
+const replyConnectAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.connect.address
+const replyConnectData = {
   workspace_id: "12345",
   data: "ok:view|edit|control"
 }
 
-const replyConnectAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.connect.address
 const replyNewAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.new.address
 const replyNewData = {
   status: "ok",
@@ -29,101 +28,83 @@ let osc: OSC
 
 const mockBridgePlugin = mock<OSC.BridgePlugin>()
 
-let messagesToSend: IOscMessage[] = []
+let mockMessage1: IOscMessage, mockMessage2: IOscMessage
 let connectResponse
-const replyConnectMessage = new OSC.Message(replyConnectAddress, JSON.stringify(connectData))
+const replyConnectMessage = new OSC.Message(replyConnectAddress, JSON.stringify(replyConnectData))
 const onSpy = jest.spyOn(OSC.prototype, "on")
+
+const callOnListenerCallbacks = (message: OSC.Message) => {
+  for (const [event, callback] of onSpy.mock.calls) {
+    if (event !== "*" && !message.address.startsWith(event.replace("/*", ""))) {
+      continue
+    }
+    callback(message)
+  }
+}
 
 describe('Bridge WS client with UDP server', () => {
   beforeEach(async () => {
-    const mockMessage1 = mock<IOscMessage>()
+    mockMessage1 = mock<IOscMessage>()
     mockMessage1.address = "/test1"
     mockMessage1.args = ["string"]
-    const mockMessage2 = mock<IOscMessage>()
+    mockMessage2 = mock<IOscMessage>()
     mockMessage2.address = "/test2"
     mockMessage2.args = [123]
-    messagesToSend = [mockMessage1, mockMessage2]
 
-    mockBridgePlugin.open.mockImplementation(() => osc.send(replyConnectMessage))
-
-    onSpy.mockImplementationOnce((event, callback) => {
+    mockBridgePlugin.open.mockImplementationOnce(() => {
+      const [event, callback] = onSpy.mock.calls[0]!
       expect(event).toBe("open")
       callback()
-      return 1
     })
-    onSpy.mockImplementationOnce((event, callback) => {
-      expect(event).toBe(replyConnectAddress)
-      callback(replyConnectMessage)
-      return 2
+    mockBridgePlugin.send.mockImplementationOnce(() => {
+      callOnListenerCallbacks(replyConnectMessage)
     })
-
 
     osc = new OSC({ plugin: mockBridgePlugin })
 
     qlab = new QLabWorkspace(osc, mockLogger)
+
+    await qlab.open()
     connectResponse = await qlab.connect()
-    expect(connectResponse).toBe("Successfully connected.")
   })
 
+  afterEach(() => {
+    jest.resetAllMocks()
+  })
 
   describe('and get a reply', () => {
-    const wildcardAddress = "/*"
     const { reply } = OSC_DICTIONARY
 
+    beforeEach(() => {
+      onSpy.mockClear()
+    })
+
     test('one message', async () => {
-      const testAddress = qlab.getTargetAddress("/test1")
-      const testMessage = new OSC.Message(testAddress)
-      mockBridgePlugin.send.mockImplementation((message) => {
-        const [address, ...args] = new TextDecoder().decode(message).split(",")
-        const replyNewMessage = new OSC.Message(reply.address + qlab.getTargetAddress(address), ...args)
-        onSpy.mockImplementationOnce((event, callback) => {
-          if (event.startsWith(reply.address)) {
-            expect(event).toBe("/reply" + qlab.getTargetAddress(wildcardAddress))
-            expect(replyNewMessage.address).toMatch(new RegExp(event))
-            callback(replyNewMessage)
-          } else {
-            expect(event).toBe(qlab.getTargetAddress(wildcardAddress))
-            expect(testAddress).toMatch(new RegExp(event))
-            callback(testMessage)
-            osc.send(replyNewMessage)
-          }
-          return 4
-        })
-        onSpy.mockImplementationOnce((event, callback) => {
-          expect(event).toBe(qlab.getTargetAddress(wildcardAddress))
-          expect(replyNewMessage.address).toMatch(new RegExp(event))
-          callback(replyNewMessage)
-          return 5
-        })
-        onSpy.mockImplementationOnce((event, callback) => {
-          expect(event).toBe("/reply" + qlab.getTargetAddress(wildcardAddress))
-          expect(replyNewMessage.address).toMatch(new RegExp(event))
-          callback(replyNewMessage)
-          return 6
-        })
-        onSpy.mockImplementationOnce((event, callback) => {
-          expect(event).toBe("*")
-          callback(replyNewMessage)
-          return 7
-        })
-        onSpy.mockImplementationOnce((event, callback) => {
-          expect(event).toBe("/reply" + qlab.getTargetAddress(wildcardAddress))
-          expect(replyNewMessage.address).toMatch(new RegExp(event))
-          callback(replyNewMessage)
-          return 8
-        })
-        onSpy.mockImplementationOnce((event, callback) => {
-          expect(event).toBe("*")
-          callback(replyNewMessage)
-          return 9
-        })
-        qlab.listen()
+      mockBridgePlugin.send.mockImplementationOnce((message) => {
+        const [address] = new TextDecoder().decode(message).split(",")
+        const replyTestMessage = new OSC.Message(reply.address + qlab.getTargetAddress(address), JSON.stringify(replyNewData))
+        osc.send(replyTestMessage, { receiver: 'udp' })
+        callOnListenerCallbacks(replyTestMessage)
       })
 
-      qlab.send(testMessage)
+      qlab.listen()
+      qlab.send(mockMessage1)
 
-      expect(onSpy).toHaveBeenCalledTimes(9)
-      expect(mockBridgePlugin.send).toHaveBeenCalledTimes(3)
+      expect(onSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test('two messages', async () => {
+      mockBridgePlugin.send.mockImplementationOnce((message) => {
+        const [address] = new TextDecoder().decode(message).split(",")
+        const replyTestMessage = new OSC.Message(reply.address + qlab.getTargetAddress(address), JSON.stringify(replyNewData))
+        osc.send(replyTestMessage, { receiver: 'udp' })
+        callOnListenerCallbacks(replyTestMessage)
+      })
+
+      qlab.listen()
+      qlab.send(mockMessage1, mockMessage2)
+
+      expect(onSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

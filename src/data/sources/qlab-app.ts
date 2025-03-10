@@ -1,7 +1,7 @@
 import { ICueApp } from "../../domain/abstractions/i-cues"
 import ILogger from "../../domain/abstractions/i-logger";
 import OSC from "osc-js";
-import { IOscServer, IOscDictionary } from "../../domain/abstractions/i-osc";
+import { IOscServer, IOscDictionary, IOscMessage } from "../../domain/abstractions/i-osc";
 
 export type CueType =
   "audio" |
@@ -68,33 +68,46 @@ export class QLabWorkspace implements ICueApp, IOscServer {
 
   constructor(private osc: OSC, private logger: ILogger) { }
 
-  connect(): Promise<string> {
-    this.osc.on("open", () => {
-      this.logger.log(`Opened WebSocket bridge port on localhost:8080. Ready to accept OSC messages.`)
+  open(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.osc.on("open", () => {
+        this.logger.log(`Opened WebSocket bridge port on localhost:8080.`)
+        resolve()
+      })
+      this.osc.on("error", (error: unknown) => {
+        this.logger.log(`Error while opening port: ${JSON.stringify(error, null, 1)}`)
+        reject(error)
+      })
+      this.osc.open()
     })
+  }
 
+  connect(): Promise<string> {
     return new Promise((resolve, reject) => {
       const { reply, connect } = OSC_DICTIONARY
       const connectReplyAddress = reply.address + connect.address
       this.osc.on(connectReplyAddress, (message: OSC.Message) => {
-      //const connectReplyListener = this.osc.on(connectReplyAddress, (message: OSC.Message) => {
+        //const connectReplyListener = this.osc.on(connectReplyAddress, (message: OSC.Message) => {
         // this.osc.off(connectReplyAddress, connectReplyListener)
         try {
           const { args } = message
           if (!args?.length) {
             throw new Error(`No args returned.`)
           }
-          this.handleConnectReply(args[0] as string)
-          resolve("Successfully connected.")
+          if (!message.address.startsWith(reply.address)) {
+            return
+          }
+          this.setId(args[0] as string)
+          resolve("Successfully connected. Ready to accept OSC messages.")
         } catch (e) {
           reject((e as Error)?.message ?? e)
         }
       })
       this.osc.on("error", (error: unknown) => {
-        this.logger.log(`Error from bridge: ${JSON.stringify(error, null, 1)}`)
+        this.logger.log(`Error while connecting: ${JSON.stringify(error, null, 1)}`)
         reject(error)
       })
-      this.osc.open()
+      this.osc.send(new OSC.Message(connect.address))
     })
   }
 
@@ -102,27 +115,35 @@ export class QLabWorkspace implements ICueApp, IOscServer {
     const { reply } = OSC_DICTIONARY
     const wildcard = "*"
     const workspaceTargetAddress = this.getTargetAddress("/" + wildcard)
-    this.osc.on(workspaceTargetAddress, () => {
-      this.logger.log(`Sending message to UDP client:`)
-    })
-    this.osc.on(reply.address + workspaceTargetAddress, () => {
-      this.logger.log(`Forwarding reply to WebSocket client:`)
-    })
     this.osc.on(wildcard, (message: OSC.Message) => {
-      this.logger.log(`\n${this.logOscMessage(message)}`)
+      const prefaceLog = message.address.startsWith(reply.address)
+        ? "Forwarding reply to WebSocket client:"
+        : message.address.includes(this.getTargetAddress())
+          ? "Sending message to UDP client:"
+          : "Unknown message received:"
+      this.logger.log(`${prefaceLog}\n${this.logOscMessage(message)}`)
     })
     this.logger.log(`Listening for messages on:\n - ${workspaceTargetAddress}\n - ${reply.address + workspaceTargetAddress}`)
   }
 
-  send(message: OSC.Message | OSC.Bundle) {
-    this.osc.send(message)
+  send(...messages: IOscMessage[]) {
+    const oscMessages = messages.map(({ address, args }) => new OSC.Message(address, ...args))
+    if (!oscMessages?.length) {
+      throw new Error("No messages passed as send input.")
+    }
+    const [firstOscMessage] = oscMessages
+    if (!firstOscMessage) {
+      throw new Error("First OSC message is undefined.")
+    }
+    const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
+    this.osc.send(payload, { receiver: "ws" })
   }
 
   getDictionary(): IOscDictionary {
     return OSC_DICTIONARY
   }
 
-  handleConnectReply(replyResponse: string) {
+  setId(replyResponse: string) {
     const { workspace_id, data } = JSON.parse(replyResponse)
 
     const splitData = (data as string)?.split(":")
@@ -130,7 +151,12 @@ export class QLabWorkspace implements ICueApp, IOscServer {
       throw new Error("Password was incorrect or did not provide permissions. Please try again.")
     }
 
+    if (!workspace_id) {
+      throw new Error(`No workspace_id key in response: ${replyResponse}`)
+    }
+
     this.id = workspace_id
+    this.logger.log(`Set workspace ID: ${this.id}`)
   }
 
   private logOscMessage({ address, args }: OSC.Message) {
@@ -142,6 +168,10 @@ export class QLabWorkspace implements ICueApp, IOscServer {
   }
 
   getTargetAddress(address?: string): string {
+    if (!this.id) {
+      throw new Error("No Workspace ID has been set yet.")
+    }
+
     const { workspace } = OSC_DICTIONARY
     let targetAddress = `${workspace.address}/${this.id}`
     if (address) {

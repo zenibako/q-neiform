@@ -1,4 +1,3 @@
-import { action } from "@oclif/core/ux";
 import { Line } from "../../data/repositories/scripts";
 import { CueType } from "../../data/sources/qlab-app";
 import { ICue } from "../abstractions/i-cues";
@@ -35,6 +34,7 @@ export class Cue implements ICue {
     if (this.mode) {
       actions.push(new CueAction(this.getAddress(dict.mode.address), [this.mode]))
     }
+
     return actions
   }
 

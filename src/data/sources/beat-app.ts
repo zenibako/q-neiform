@@ -5,6 +5,7 @@ import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domai
 import OSC from "osc-js"
 import BeatWebSocketWindow from "../transfer-objects/beat-window"
 import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-app"
+import { stringify } from "querystring"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -20,6 +21,7 @@ type ServerConfiguration = {
 export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   private window?: BeatWebSocketWindow
   private oscServer?: IOscServer
+  private serverConfig: ServerConfiguration
 
   constructor(private mode: Mode) {
     if (this.mode == Mode.DEVELOPMENT) {
@@ -37,6 +39,8 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       const cueId = Beat.currentLine.getCustomData("cue_id")
       this.window?.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
     })
+
+    this.serverConfig = this.loadServerConfiguration()
   }
 
   log(message: string) {
@@ -80,58 +84,51 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.alert(title, message)
   }
 
-  async connect(): Promise<string> {
-    let serverConfig = this.loadServerConfiguration()
-    if (!serverConfig?.host || !serverConfig?.port) {
+  async open(): Promise<void> {
+    const { host, port } = this.serverConfig
+    if (!host || !port) {
       const { address: modalHost, port: modalPort } = this.promptUserForServerInfo()
       const host = modalHost?.length ? modalHost : WS_DEFAULT_ADDRESS
       const port = modalPort?.length ? modalPort : WS_DEFAULT_PORT
-      serverConfig = { host, port }
-      this.saveServerConfiguration(serverConfig)
+      Object.assign(this.serverConfig, { host, port })
+      this.saveServerConfiguration(this.serverConfig)
     }
 
+    this.window = new BeatWebSocketWindow(host as string, port as string)
     return new Promise((resolve, reject) => {
-      Beat.custom = {
-        handleOpen: (osc) => {
-          let { password } = serverConfig
-          if (!password) {
-            password = this.promptUserForPassword()
-            serverConfig.password = password
-          }
+      try {
+        this.window?.open((osc) => {
           this.oscServer = new QLabWorkspace(osc as OSC, this)
-          const { connect } = OSC_DICTIONARY
-          return { address: connect.address, password }
-        },
-        handleReply: (reply) => {
-          const { args } = reply as IOscMessage
-          Beat.log(`Received connect reply in plugin!`)
-          try {
-            if (!args?.length) {
-              throw new Error(`No args returned.`)
-            }
-            this.oscServer?.handleConnectReply(args[0] as string)
-            this.saveServerConfiguration(serverConfig)
-            this.window?.updateStatusDisplay(`Connected to QLab server.`)
-            resolve("Received reply")
-          } catch (e) {
-            Beat.alert("Access Error", e as string)
-            serverConfig.password = null
-            this.saveServerConfiguration(serverConfig)
-            reject(e as string)
-          }
-        },
-        handleError: (arg) => {
-          const [error, status] = arg as [string, number]
-          this.handleError(error, status)
-          this.saveServerConfiguration({ host: null, port: null })
-          this.window?.close()
-          reject(error)
-        }
+          resolve()
+        })
+      } catch (e) {
+        reject(e)
       }
-
-      this.window = new BeatWebSocketWindow(serverConfig.host as string, serverConfig.port as string)
     })
   }
+
+  async connect(): Promise<void> {
+    const { connect: { address } } = OSC_DICTIONARY
+    const args = []
+    if (!this.serverConfig.password) {
+      const password = this.promptUserForPassword()
+      if (password) {
+        args.push(password)
+      }
+      Object.assign(this.serverConfig, { password })
+    }
+
+    try {
+      const connectResponse = JSON.parse(await this.sendAndWaitForReply({ address, args }))
+      this.oscServer?.setId(connectResponse)
+      this.saveServerConfiguration(this.serverConfig)
+    } catch (e) {
+      this.saveServerConfiguration({ host: null, port: null })
+      this.window?.close()
+      throw e
+    }
+  }
+
 
   getDictionary(): IOscDictionary {
     return OSC_DICTIONARY
@@ -144,51 +141,47 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return this.oscServer.getTargetAddress(address)
   }
 
-  loadServerConfiguration(): ServerConfiguration | null {
-    return Beat.getDocumentSetting("server") as ServerConfiguration
+  private loadServerConfiguration(): ServerConfiguration {
+    return Beat.getDocumentSetting("server") as ServerConfiguration ?? {}
   }
 
-  saveServerConfiguration(server: ServerConfiguration | null) {
+  private saveServerConfiguration(server: ServerConfiguration) {
     Beat.setDocumentSetting("server", server)
   }
 
-  sendAndWaitForReply(...messages: IOscMessage[]): Promise<string | null> {
+  sendAndWaitForReply(...messages: IOscMessage[]): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.window?.send(messages, {
-        handleReply: (arg) => {
-          Beat.log(`Received send reply in plugin!`)
-          const [responseBodyString] = (arg as OSC.Message).args
-          const { status, data } = JSON.parse(responseBodyString as string)
-
-          if (status === "denied") {
-            Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
-            this.window?.updateStatusDisplay("Access denied.")
-            reject("Access revoked. Need to reopen plugin.")
-          }
-
-          if (status === "error") {
-            this.window?.updateStatusDisplay("Errors while sending. Check logs for details.")
-            reject("Send errors")
-          }
-
-          resolve(data)
-        },
-        handleError: (arg) => {
-          const [error, status] = arg as [string, number]
-          this.handleError(error, status)
-          reject(error)
+      this.window?.send(messages, (reply) => {
+        const { args } = reply as IOscMessage
+        Beat.log(`Received send reply in plugin! ${JSON.stringify(reply, null, 1)}`)
+        if (!args?.length) {
+          throw new Error(`No args returned.`)
         }
+
+        const [responseBody] = args
+        const responseBodyString = JSON.stringify(responseBody)
+        const { status } = JSON.parse(responseBodyString)
+
+        if (status === "denied") {
+          Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
+          this.window?.updateStatusDisplay("Access denied.")
+          reject("Access revoked. Need to reopen plugin.")
+        }
+
+        if (status === "error") {
+          this.window?.updateStatusDisplay("Errors while sending. Check logs for details.")
+          reject("Send errors")
+        }
+
+        Beat.log(`Returning ${responseBodyString}`)
+        resolve(responseBodyString)
+        return responseBodyString
       })
     })
   }
 
   send(...messages: IOscMessage[]): void {
-    this.window?.send(messages, {
-      handleError: (arg) => {
-        const [error, status] = arg as [string, number]
-        this.handleError(error, status)
-      }
-    })
+    this.window?.send(messages)
   }
 
   disconnect() {

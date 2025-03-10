@@ -32,11 +32,9 @@ export default class BridgeServe extends Command {
     })
 
     const qlab = new QLabWorkspace(osc, this)
-    // const cues = new Cues(this, qlab, this)
 
     try {
-      const connectionMessage = await qlab.connect()
-      this.log(connectionMessage)
+      await qlab.open()
       qlab.listen()
     } catch (e) {
       this.log("Error: " + ((e as Error).message ?? e))

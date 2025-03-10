@@ -1,3 +1,4 @@
+import OSC from "osc-js"
 import { IOscMessage } from "../../domain/abstractions/i-osc"
 
 const WIDTH = 300
@@ -24,7 +25,9 @@ export default class BeatWebSocketWindow {
     const replyListener = osc.on(replyAddress, (reply) => {
       // osc.off(replyAddress, replyListener)
       Beat.log("Reply received in window.")
-      Beat.call((arg) => Beat.custom.handleReply(arg), reply)
+      Beat.callAndWait((arg) => Beat.custom.handleReply(arg), reply).then(
+        (response) => Beat.log("Reply processed in plugin: " + response)
+      )
     })
     osc.send(message)
     Beat.log("Message sent.")
@@ -36,22 +39,22 @@ export default class BeatWebSocketWindow {
 
   updateStatusDisplay("Connecting to bridge at ${host}:${port}...")
   osc.on("error", (error) => throwError(error))
-  osc.on("open", () => Beat.callAndWait((arg) => Beat.custom.handleOpen(arg), osc).then(
-      ({address, password}) => sendMessage(new OSC.Message(address, password)),
-      (error) => throwError(error)
-    )
-  )
-  osc.open()
+  osc.on("open", () => Beat.call((arg) => Beat.custom.handleOpen(arg), osc))
 </script>`, WIDTH, HEIGHT, this.close
     )
     this.window.gangWithDocumentWindow()
   }
 
-  send(messages: IOscMessage[], customFunctions: Beat.CustomFunctions): void {
-    Beat.custom = {
-      handleReply: () => Beat.log("No reply handler was assigned."),
-      handleError: () => Beat.log("No error handler was assigned."),
-      ...customFunctions
+  send(messages: IOscMessage[], callback?: (message: unknown) => string): void {
+    if (callback) {
+      Beat.custom.handleReply = callback
+    }
+
+    Beat.custom.handleError = (arg) => {
+      const [error, status] = arg as [string, number]
+      const { title, message } = this.getAlertInfo(status)
+      Beat.alert(title, message)
+      throw new Error(error)
     }
 
     const messageStrings = messages.map(({ address, args }) => {
@@ -71,8 +74,34 @@ export default class BeatWebSocketWindow {
     this.window.runJS(jsString)
   }
 
+  private getAlertInfo(status: number, error?: string) {
+    const tryAgainMessage = "Try again. Is \"q-neiform bridge serve\" running?"
+    switch (status) {
+      case OSC.STATUS.IS_NOT_INITIALIZED:
+        return {
+          title: "Initialization Error",
+          message: tryAgainMessage
+        }
+      case OSC.STATUS.IS_CONNECTING:
+        return {
+          title: "Connection Error",
+          message: tryAgainMessage
+        }
+      default:
+        return {
+          title: error ? "Server Error" : "Unknown Error",
+          message: error ?? "Closing plugin. Reopen and try again."
+        }
+    }
+  }
+
   updateStatusDisplay(text: string) {
     this.window.runJS(`updateStatusDisplay("${text}")`)
+  }
+
+  open(callback: (osc: unknown) => void) {
+    Beat.custom.handleOpen = callback
+    this.window.runJS(`osc.open()`)
   }
 
   close() {

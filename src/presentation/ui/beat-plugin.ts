@@ -20,10 +20,11 @@ export default class BeatPlugin {
     ])
 
     try {
+      await beat.open()
       await beat.connect()
       beat.mountMenu(menu)
     } catch (e) {
-      beat.log(`Error while connecting to bridge: ${(e as Error).message ?? e}`)
+      beat.log(`Error while connecting to bridge: ${(e as Error).message ?? JSON.stringify(e, null, 1)}`)
       Beat.end()
     }
 
