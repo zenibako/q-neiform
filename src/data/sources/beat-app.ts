@@ -153,6 +153,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     const replyMessages = messages.filter(({ hasReply }) => hasReply)
     return new Promise((resolve, reject) => {
       let repliesRemaining = replyMessages.length
+      const replyStrings: string[] = []
       this.window?.send(messages, (replyMessage) => {
         const { args } = replyMessage as IOscMessage
         Beat.log(`Received send reply in plugin! ${JSON.stringify(replyMessage, null, 1)}`)
@@ -175,13 +176,15 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           reject("Send errors")
         }
 
-        Beat.log(`Returning ${responseBodyString}`)
         repliesRemaining--
-        if (repliesRemaining > 0) {
-          return responseBodyString
+        replyStrings.push(responseBodyString)
+
+        if (repliesRemaining === 0) {
+          const replyJoinedString = replyStrings.join(",")
+          resolve(replyJoinedString)
         }
 
-        resolve(responseBodyString)
+        Beat.log(`Returning ${responseBodyString}`)
         return responseBodyString
       })
 
