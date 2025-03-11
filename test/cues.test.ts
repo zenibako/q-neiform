@@ -40,8 +40,8 @@ const line4 = "Who are you, lady?"
 describe('Push cues with OSC client', () => {
   beforeEach(async () => {
     mockOscClient.getDictionary.mockReturnValue(dict)
-    mockOscClient.sendAndWaitForReply.mockResolvedValueOnce("1234")
-    mockOscClient.sendAndWaitForReply.mockResolvedValueOnce("5678")
+    mockOscClient.send.mockResolvedValueOnce("1234")
+    mockOscClient.send.mockResolvedValueOnce("5678")
   })
 
   test('one cue', async () => {

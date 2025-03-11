@@ -97,10 +97,10 @@ export default class Cues implements ICues {
 
   private async sendCue(cue: ICue): Promise<void> {
     const dict = this.oscClient.getDictionary()
-    const messages = cue.getActions(dict).map(({ address, args }) => (
-      { address: this.oscClient.getTargetAddress(address) ?? address, args }
+    const messages = cue.getActions(dict).map(({ address, args, hasReply }) => (
+      { address: this.oscClient.getTargetAddress(address) ?? address, args, hasReply }
     ))
-    cue.id = await this.oscClient.sendAndWaitForReply(...messages)
+    cue.id = await this.oscClient.send(...messages)
   }
 
 }

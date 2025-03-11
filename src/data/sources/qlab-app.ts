@@ -128,26 +128,34 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     return "Unknown message received"
   }
 
-  send(...messages: IOscMessage[]) {
+  send(...messages: IOscMessage[]): Promise<string | null> {
+    const replyMessages = messages.filter(({ hasReply }) => hasReply)
     const oscMessages = messages.map(({ address, args }) => new OSC.Message(address, ...args))
     if (!oscMessages?.length) {
       throw new Error("No messages passed as send input.")
     }
+
     const [firstOscMessage] = oscMessages
     if (!firstOscMessage) {
       throw new Error("First OSC message is undefined.")
     }
-    const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
-    this.osc.send(payload, { receiver: "ws" })
-  }
 
-  sendAndWaitForReply(...messages: IOscMessage[]): Promise<string | null> {
+    const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
     return new Promise((resolve) => {
       const { reply } = OSC_DICTIONARY
-      this.osc.on(reply.address, () => {
-        resolve("Reply heard")
-      })
-      this.send(...messages)
+      let repliesRemaining = replyMessages.length
+      if (repliesRemaining) {
+        this.osc.on(reply.address, () => {
+          repliesRemaining--
+          if (repliesRemaining === 0) {
+            resolve("All replies heard")
+          }
+        })
+      }
+      this.osc.send(payload, { receiver: "ws" })
+      if (repliesRemaining === 0) {
+        resolve("No replies expected.")
+      }
     })
   }
 

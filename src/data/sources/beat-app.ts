@@ -115,7 +115,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
     try {
       const connectResponse = JSON.parse(
-        await this.sendAndWaitForReply({ address, args: [this.serverConfig.password!] })
+        await this.send({ address, args: [this.serverConfig.password!], hasReply: true })
       )
       this.oscServer?.setIdFromConnectResponse(connectResponse)
       this.saveServerConfiguration(this.serverConfig)
@@ -148,11 +148,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", server)
   }
 
-  sendAndWaitForReply(...messages: IOscMessage[]): Promise<string> {
+  send(...messages: IOscMessage[]): Promise<string> {
+    const { reply: replyDict } = OSC_DICTIONARY
+    const replyMessages = messages.filter(({ hasReply }) => hasReply)
     return new Promise((resolve, reject) => {
-      this.window?.send(messages, (reply) => {
-        const { args } = reply as IOscMessage
-        Beat.log(`Received send reply in plugin! ${JSON.stringify(reply, null, 1)}`)
+      let repliesRemaining = replyMessages.length
+      this.window?.send(messages, (replyMessage) => {
+        const { args } = replyMessage as IOscMessage
+        Beat.log(`Received send reply in plugin! ${JSON.stringify(replyMessage, null, 1)}`)
         if (!args?.length) {
           throw new Error(`No args returned.`)
         }
@@ -173,14 +176,22 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         }
 
         Beat.log(`Returning ${responseBodyString}`)
+        repliesRemaining--
+        if (repliesRemaining > 0) {
+          return responseBodyString
+        }
+
         resolve(responseBodyString)
         return responseBodyString
       })
-    })
-  }
 
-  send(...messages: IOscMessage[]): void {
-    this.window?.send(messages)
+      if (repliesRemaining === 0) {
+        resolve("")
+        return
+      }
+
+      Beat.log(`Waiting for replies:\n${replyMessages.map(({ address }) => ` - ${replyDict.address + address}`).join("\n")}`)
+    })
   }
 
   disconnect() {
@@ -214,13 +225,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       return Beat.menuItem(title, keyboardShortcuts ?? [], () => useCase.execute())
     })
 
-    const testMessage = { address: this.getTargetAddress("/selectedCues"), args: [] }
+    const testMessage = { address: this.getTargetAddress("/selectedCues"), args: [], hasReply: false }
+    const testMessageWithReply = { address: this.getTargetAddress("/selectedCues"), args: [], hasReply: true }
     const beatMenu = Beat.menu(menu.title, menuItems)
     beatMenu.addItem(Beat.separatorMenuItem())
     beatMenu.addItem(Beat.menuItem("Disconnect", ["ctrl", "q"], () => this.disconnect()))
     beatMenu.addItem(Beat.separatorMenuItem())
     beatMenu.addItem(Beat.menuItem("Test Send", ["ctrl", "s"], () => this.send(testMessage, testMessage)))
-    beatMenu.addItem(Beat.menuItem("Test Send and Reply", ["ctrl", "r"], async () => this.sendAndWaitForReply(testMessage, testMessage)))
+    beatMenu.addItem(Beat.menuItem("Test Send and Reply", ["ctrl", "r"], async () => this.send(testMessageWithReply, testMessage)))
     Beat.log("Mounted menu items.")
   }
 

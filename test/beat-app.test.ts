@@ -49,6 +49,9 @@ let messagesToSend: IOscMessage[] = []
 let beat: BeatApp
 
 describe('Send messages with OSC client', () => {
+  const mockReplyMessage = mock<IOscMessage>()
+  const mockNoReplyMessage = mock<IOscMessage>()
+
   beforeEach(async () => {
 
     mockBeatApi.log.mockImplementation((message) => {
@@ -71,13 +74,13 @@ describe('Send messages with OSC client', () => {
     await beat.open()
     await beat.connect()
 
-    const mockMessage1 = mock<IOscMessage>()
-    mockMessage1.address = "/test1"
-    mockMessage1.args = ["string"]
-    const mockMessage2 = mock<IOscMessage>()
-    mockMessage2.address = "/test2"
-    mockMessage2.args = [123]
-    messagesToSend = [mockMessage1, mockMessage2]
+    mockReplyMessage.address = "/test1"
+    mockReplyMessage.args = ["string"]
+    mockReplyMessage.hasReply = true
+    mockNoReplyMessage.address = "/test2"
+    mockNoReplyMessage.args = [123]
+    mockNoReplyMessage.hasReply = false
+    messagesToSend = [mockReplyMessage, mockNoReplyMessage]
   })
 
   afterEach(() => {
@@ -89,7 +92,7 @@ describe('Send messages with OSC client', () => {
       mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
         mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
       })
-      const reply = await beat.sendAndWaitForReply(messagesToSend[0]!)
+      const reply = await beat.send(mockReplyMessage)
       expect(reply).toBeTruthy()
     })
 
@@ -98,7 +101,7 @@ describe('Send messages with OSC client', () => {
       mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
         mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
       })
-      const replies = await beat.sendAndWaitForReply(...messagesToSend)
+      const replies = await beat.send(mockReplyMessage, mockNoReplyMessage)
       expect(replies).toBeTruthy()
     })
 
@@ -108,7 +111,7 @@ describe('Send messages with OSC client', () => {
         mockBeatApi.custom.handleError!([error, OSC.STATUS.IS_OPEN])
       })
       try {
-        await beat.sendAndWaitForReply(...messagesToSend)
+        await beat.send(...messagesToSend)
         fail()
       } catch (e) {
         expect((e as Error).message).toMatch(error)
@@ -118,11 +121,11 @@ describe('Send messages with OSC client', () => {
 
   describe('and don\'t wait for a reply', () => {
     test('one message', () => {
-      beat.send(messagesToSend[0]!)
+      beat.send(mockNoReplyMessage)
     })
 
     test('two messages', () => {
-      beat.send(...messagesToSend)
+      beat.send(mockNoReplyMessage, mockNoReplyMessage)
     })
   })
 })

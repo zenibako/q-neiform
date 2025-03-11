@@ -47,7 +47,7 @@ export default class BeatWebSocketWindow {
     this.window.gangWithDocumentWindow()
   }
 
-  send(messages: IOscMessage[], callback?: (message: unknown) => string): void {
+  send(messages: IOscMessage[], callback: (message: unknown) => string): void {
     if (callback) {
       Beat.custom.handleReply = callback
     }
@@ -72,7 +72,7 @@ export default class BeatWebSocketWindow {
       jsString += `(new OSC.Bundle([${messageStrings.join(",")}]))`
     }
 
-    Beat.log(jsString)
+    Beat.log(`Executing in window: ${jsString}`)
     this.window.runJS(jsString)
   }
 

@@ -6,7 +6,8 @@ import { IOscDictionary, IOscMessage } from "../abstractions/i-osc";
 export class CueAction implements IOscMessage {
   constructor(
     public readonly address: string,
-    public readonly args: (string | number)[] = []
+    public readonly args: (string | number)[] = [],
+    public readonly hasReply = false
   ) { }
 }
 
@@ -27,7 +28,7 @@ export class Cue implements ICue {
   getActions(dict: IOscDictionary) {
     const actions: CueAction[] = []
     if (!this.id) {
-      actions.push(new CueAction(dict.new.address, [this.type]))
+      actions.push(new CueAction(dict.new.address, [this.type], true))
     }
 
     actions.push(new CueAction(this.getAddress(dict.name.address), [this.name]))
