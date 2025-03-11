@@ -7,7 +7,8 @@ const HEIGHT = 50
 export default class BeatWebSocketWindow {
   private window: Beat.Window
 
-  constructor(host: string, port: string) {
+  constructor(host: string, port: string, callback: (osc: unknown) => void) {
+    Beat.custom.handleOpen = callback
     this.window = Beat.htmlWindow(`
 <span id="status"></span>
 <script type="text/javascript" src="lib/osc.min.js"></script>
@@ -40,6 +41,7 @@ export default class BeatWebSocketWindow {
   updateStatusDisplay("Connecting to bridge at ${host}:${port}...")
   osc.on("error", (error) => throwError(error))
   osc.on("open", () => Beat.call((arg) => Beat.custom.handleOpen(arg), osc))
+  osc.open()
 </script>`, WIDTH, HEIGHT, this.close
     )
     this.window.gangWithDocumentWindow()
@@ -97,11 +99,6 @@ export default class BeatWebSocketWindow {
 
   updateStatusDisplay(text: string) {
     this.window.runJS(`updateStatusDisplay("${text}")`)
-  }
-
-  open(callback: (osc: unknown) => void) {
-    Beat.custom.handleOpen = callback
-    this.window.runJS(`osc.open()`)
   }
 
   close() {

@@ -1,4 +1,3 @@
-import OSC from "osc-js";
 import Cues from "../../data/repositories/cues";
 import { Scripts } from "../../data/repositories/scripts";
 import BeatApp, { Mode } from "../../data/sources/beat-app"

@@ -29,7 +29,6 @@ let osc: OSC
 const mockBridgePlugin = mock<OSC.BridgePlugin>()
 
 let mockMessage1: IOscMessage, mockMessage2: IOscMessage
-let connectResponse
 const replyConnectMessage = new OSC.Message(replyConnectAddress, JSON.stringify(replyConnectData))
 const onSpy = jest.spyOn(OSC.prototype, "on")
 
@@ -55,6 +54,7 @@ describe('Bridge WS client with UDP server', () => {
       const [event, callback] = onSpy.mock.calls[0]!
       expect(event).toBe("open")
       callback()
+      osc.send(replyConnectMessage, { receiver: 'udp' })
     })
     mockBridgePlugin.send.mockImplementationOnce(() => {
       callOnListenerCallbacks(replyConnectMessage)
@@ -64,8 +64,7 @@ describe('Bridge WS client with UDP server', () => {
 
     qlab = new QLabWorkspace(osc, mockLogger)
 
-    await qlab.open()
-    connectResponse = await qlab.connect()
+    await qlab.connect()
   })
 
   afterEach(() => {
@@ -80,12 +79,6 @@ describe('Bridge WS client with UDP server', () => {
     })
 
     test('one message', async () => {
-      mockBridgePlugin.send.mockImplementationOnce((message) => {
-        const [address] = new TextDecoder().decode(message).split(",")
-        const replyTestMessage = new OSC.Message(reply.address + qlab.getTargetAddress(address), JSON.stringify(replyNewData))
-        osc.send(replyTestMessage, { receiver: 'udp' })
-        callOnListenerCallbacks(replyTestMessage)
-      })
 
       qlab.listen()
       qlab.send(mockMessage1)

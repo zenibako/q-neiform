@@ -50,7 +50,6 @@ let beat: BeatApp
 
 describe('Send messages with OSC client', () => {
   beforeEach(async () => {
-    mockBeatApi.htmlWindow.mockImplementation(() => mockBeatHtmlWindow)
 
     mockBeatApi.log.mockImplementation((message) => {
       if (mode !== Mode.DEVELOPMENT) {
@@ -61,12 +60,11 @@ describe('Send messages with OSC client', () => {
     docSettingsSpy.mockReturnValue(serverSettings)
     beat = new BeatApp(mode)
 
-    mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-      console.log("handleOpen")
+    mockBeatApi.htmlWindow.mockImplementationOnce(() => {
       mockBeatApi.custom.handleOpen!(new OSC())
+      return mockBeatHtmlWindow
     })
     mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-      console.log("handleReply")
       mockBeatApi.custom.handleReply!(new OSC.Message(replyDict.address + connectDict.address, JSON.stringify(connectData)))
     })
 

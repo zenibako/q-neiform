@@ -5,7 +5,6 @@ import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domai
 import OSC from "osc-js"
 import BeatWebSocketWindow from "../transfer-objects/beat-window"
 import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-app"
-import { stringify } from "querystring"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -41,6 +40,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     })
 
     this.serverConfig = this.loadServerConfiguration()
+    Beat.custom = {}
   }
 
   log(message: string) {
@@ -94,10 +94,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       this.saveServerConfiguration(this.serverConfig)
     }
 
-    this.window = new BeatWebSocketWindow(host as string, port as string)
     return new Promise((resolve, reject) => {
       try {
-        this.window?.open((osc) => {
+        this.window = new BeatWebSocketWindow(host as string, port as string, (osc) => {
           this.oscServer = new QLabWorkspace(osc as OSC, this)
           resolve()
         })
@@ -107,21 +106,21 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     })
   }
 
-  async connect(): Promise<void> {
+  async connect(): Promise<string> {
     const { connect: { address } } = OSC_DICTIONARY
-    const args = []
     if (!this.serverConfig.password) {
       const password = this.promptUserForPassword()
-      if (password) {
-        args.push(password)
-      }
       Object.assign(this.serverConfig, { password })
     }
 
     try {
-      const connectResponse = JSON.parse(await this.sendAndWaitForReply({ address, args }))
-      this.oscServer?.setId(connectResponse)
+      const connectResponse = JSON.parse(
+        await this.sendAndWaitForReply({ address, args: [this.serverConfig.password!] })
+      )
+      this.oscServer?.setIdFromConnectResponse(connectResponse)
       this.saveServerConfiguration(this.serverConfig)
+      this.window?.updateStatusDisplay("Connected to QLab.")
+      return "Successfully connected."
     } catch (e) {
       this.saveServerConfiguration({ host: null, port: null })
       this.window?.close()
