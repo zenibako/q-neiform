@@ -42,10 +42,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
   startListeningForSelection(callback?: () => void): void {
     Beat.onSelectionChange((location, length) => {
-      const cueId = Beat.currentLine.getCustomData("cue_id")
       this.log(JSON.stringify({
         character: Beat.currentLine.characterName(),
-        id: cueId?.length ? cueId : "None",
+        id: Beat.currentLine.getCustomData("cue_id"),
         location,
         length
       }, null, 1))
@@ -62,7 +61,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
     await this.openWebSocket()
     await this.connectToBridge()
-    const response = this.sendMessages(messages)
+    const response = await this.sendMessages(messages)
     this.closeWebSocket()
     return response
   }
