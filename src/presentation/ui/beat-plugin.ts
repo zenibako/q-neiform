@@ -11,7 +11,7 @@ export default class BeatPlugin {
   async initialize() {
     beat.log("Starting plugin...")
     const scripts = new Scripts(beat, beat)
-    const cues = new Cues(beat, beat)
+    const cues = new Cues(beat)
 
     const menu = new Menu("QLab", [
       new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues, beat)),
@@ -19,8 +19,7 @@ export default class BeatPlugin {
     ])
 
     try {
-      await beat.open()
-      await beat.connect()
+      await beat.initialize()
       beat.mountMenu(menu)
     } catch (e) {
       beat.log(`Error while connecting to bridge: ${(e as Error).message ?? JSON.stringify(e, null, 1)}`)

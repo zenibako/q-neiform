@@ -66,9 +66,14 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
 
   public id?: string
 
-  constructor(private osc: OSC, private logger: ILogger) { }
+  constructor(
+    private osc: OSC,
+    public readonly host: string,
+    public readonly port: string,
+    private logger: ILogger
+  ) { }
 
-  connect(): Promise<string> {
+  initialize(): Promise<string> {
     return new Promise((resolve, reject) => {
       this.osc.on("open", () => {
         this.logger.log(`Opened WebSocket bridge port on localhost:8080.`)

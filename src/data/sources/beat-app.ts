@@ -20,31 +20,101 @@ type ServerConfiguration = {
 export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   private window?: BeatWebSocketWindow
   private oscServer?: IOscServer
-  private serverConfig: ServerConfiguration
 
   constructor(private mode: Mode) {
     if (this.mode == Mode.DEVELOPMENT) {
       Beat.openConsole()
     }
 
-
-    Beat.onSelectionChange(() => {
-      if (!this.oscServer) {
-        return
-      }
-
-      // Beat.log(Beat.currentLine.characterName())
-      // Beat.log(`Selection: loc = ${location} / len = ${length}`)
-      const cueId = Beat.currentLine.getCustomData("cue_id")
-      this.window?.updateStatusDisplay(`Cue ID: ${cueId?.length ? cueId : "None"}"`)
-    })
-
-    this.serverConfig = this.loadServerConfiguration()
     Beat.custom = {}
   }
 
   log(message: string) {
     Beat.log(message)
+  }
+
+  async initialize(): Promise<string> {
+    await this.openWebSocket()
+    await this.connectToBridge()
+    this.closeWebSocket()
+    return "Initialized successfully."
+  }
+
+  startListeningForSelection(callback?: () => void): void {
+    Beat.onSelectionChange((location, length) => {
+      const cueId = Beat.currentLine.getCustomData("cue_id")
+      this.log(JSON.stringify({
+        character: Beat.currentLine.characterName(),
+        id: cueId?.length ? cueId : "None",
+        location,
+        length
+      }, null, 1))
+      if (callback) {
+        callback()
+      }
+    })
+  }
+
+  async send(...messages: IOscMessage[]): Promise<string> {
+    if (!this.oscServer) {
+      throw new Error("No OSC server found.")
+    }
+
+    await this.openWebSocket()
+    await this.connectToBridge()
+    const response = this.sendMessages(messages)
+    this.closeWebSocket()
+    return response
+  }
+
+  private async openWebSocket(): Promise<string> {
+    let { host, port } = this.loadServerConfiguration()
+    if (!host || !port) {
+      const { address: modalHost, port: modalPort } = this.promptUserForServerInfo()
+      host = modalHost?.length ? modalHost : WS_DEFAULT_ADDRESS
+      port = modalPort?.length ? modalPort : WS_DEFAULT_PORT
+      this.saveServerConfiguration({ host, port })
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        this.window = new BeatWebSocketWindow(host, port, (osc) => {
+          this.oscServer = new QLabWorkspace(osc as OSC, host, port, this)
+          this.saveServerConfiguration({ host, port})
+          resolve("Successfully opened connection.")
+        })
+      } catch (e) {
+        this.saveServerConfiguration({ host: null, port: null })
+        this.log("There was an error while opening the web socket.")
+        reject(e)
+      }
+    })
+  }
+
+  private async connectToBridge(): Promise<string> {
+    const { connect: { address } } = OSC_DICTIONARY
+    let { password } = this.loadServerConfiguration()
+    if (!password) {
+      password = this.promptUserForPassword()
+    }
+
+    try {
+      const connectResponse = JSON.parse(
+        await this.sendMessages([{ address, args: [password!], hasReply: true }])
+      )
+      this.oscServer?.setIdFromConnectResponse(connectResponse)
+      this.saveServerConfiguration({ password })
+      return "Successfully connected."
+    } catch (e) {
+      this.saveServerConfiguration({ password: null })
+      this.closeWebSocket()
+      throw e
+    }
+  }
+
+  private closeWebSocket() {
+    this.window?.close()
+    this.log("Closed open web socket.")
   }
 
   private promptUserForServerInfo() {
@@ -78,56 +148,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return passModalResponse.password
   }
 
-  handleError(error: string, status: number) {
-    Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
-    const { title, message } = this.getAlertInfo(status)
-    Beat.alert(title, message)
-  }
-
-  async open(): Promise<void> {
-    const { host, port } = this.serverConfig
-    if (!host || !port) {
-      const { address: modalHost, port: modalPort } = this.promptUserForServerInfo()
-      const host = modalHost?.length ? modalHost : WS_DEFAULT_ADDRESS
-      const port = modalPort?.length ? modalPort : WS_DEFAULT_PORT
-      Object.assign(this.serverConfig, { host, port })
-      this.saveServerConfiguration(this.serverConfig)
-    }
-
-    return new Promise((resolve, reject) => {
-      try {
-        this.window = new BeatWebSocketWindow(host as string, port as string, (osc) => {
-          this.oscServer = new QLabWorkspace(osc as OSC, this)
-          resolve()
-        })
-      } catch (e) {
-        reject(e)
-      }
-    })
-  }
-
-  async connect(): Promise<string> {
-    const { connect: { address } } = OSC_DICTIONARY
-    if (!this.serverConfig.password) {
-      const password = this.promptUserForPassword()
-      Object.assign(this.serverConfig, { password })
-    }
-
-    try {
-      const connectResponse = JSON.parse(
-        await this.send({ address, args: [this.serverConfig.password!], hasReply: true })
-      )
-      this.oscServer?.setIdFromConnectResponse(connectResponse)
-      this.saveServerConfiguration(this.serverConfig)
-      this.window?.updateStatusDisplay("Connected to QLab.")
-      return "Successfully connected."
-    } catch (e) {
-      this.saveServerConfiguration({ host: null, port: null })
-      this.window?.close()
-      throw e
-    }
-  }
-
 
   getDictionary(): IOscDictionary {
     return OSC_DICTIONARY
@@ -144,23 +164,32 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     return Beat.getDocumentSetting("server") as ServerConfiguration ?? {}
   }
 
-  private saveServerConfiguration(server: ServerConfiguration) {
-    Beat.setDocumentSetting("server", server)
+  private saveServerConfiguration(server: {
+    host?: string | null,
+    port?: string | null,
+    password?: string | null
+  }) {
+    const serverConfig = this.loadServerConfiguration()
+    Object.assign(serverConfig, server)
+    Beat.setDocumentSetting("server", serverConfig)
   }
 
-  send(...messages: IOscMessage[]): Promise<string> {
-    const { reply: replyDict } = OSC_DICTIONARY
+  private async sendMessages(messages: IOscMessage[]): Promise<string> {
+    if (!this.oscServer) {
+      throw new Error("No OSC server found.")
+    }
+
     const replyMessages = messages.filter(({ hasReply }) => hasReply)
     return new Promise((resolve, reject) => {
       let repliesRemaining = replyMessages.length
       const replyStrings: string[] = []
       this.window?.send(messages, (replyMessage) => {
         const { args } = replyMessage as IOscMessage
-        Beat.log(`Received send reply in plugin! ${JSON.stringify(replyMessage, null, 1)}`)
         if (!args?.length) {
           throw new Error(`No args returned.`)
         }
 
+        Beat.log(`Received send reply in plugin with args: ${args}`)
         const [responseBody] = args
         const responseBodyString = JSON.stringify(responseBody)
         const { status } = JSON.parse(responseBodyString)
@@ -176,16 +205,12 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           reject("Send errors")
         }
 
-        repliesRemaining--
         replyStrings.push(responseBodyString)
-
+        repliesRemaining--
         if (repliesRemaining === 0) {
           const replyJoinedString = replyStrings.join(",")
-          resolve(replyJoinedString)
+          return resolve(replyJoinedString)
         }
-
-        Beat.log(`Returning ${responseBodyString}`)
-        return responseBodyString
       })
 
       if (repliesRemaining === 0) {
@@ -193,12 +218,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         return
       }
 
+      const { reply: replyDict } = OSC_DICTIONARY
       Beat.log(`Waiting for replies:\n${replyMessages.map(({ address }) => ` - ${replyDict.address + address}`).join("\n")}`)
     })
-  }
-
-  disconnect() {
-    this.window?.close()
   }
 
   setLineData(range: IRange, key: string, value: string | null) {
@@ -228,14 +250,9 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       return Beat.menuItem(title, keyboardShortcuts ?? [], () => useCase.execute())
     })
 
-    const testMessage = { address: this.getTargetAddress("/selectedCues"), args: [], hasReply: false }
-    const testMessageWithReply = { address: this.getTargetAddress("/selectedCues"), args: [], hasReply: true }
     const beatMenu = Beat.menu(menu.title, menuItems)
     beatMenu.addItem(Beat.separatorMenuItem())
-    beatMenu.addItem(Beat.menuItem("Disconnect", ["ctrl", "q"], () => this.disconnect()))
-    beatMenu.addItem(Beat.separatorMenuItem())
-    beatMenu.addItem(Beat.menuItem("Test Send", ["ctrl", "s"], () => this.send(testMessage, testMessage)))
-    beatMenu.addItem(Beat.menuItem("Test Send and Reply", ["ctrl", "r"], async () => this.send(testMessageWithReply, testMessage)))
+    beatMenu.addItem(Beat.menuItem("Watch Selection", ["ctrl", "w"], () => this.startListeningForSelection()))
     Beat.log("Mounted menu items.")
   }
 
@@ -261,26 +278,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       typeAsString: serializedBeatLine.typeAsString as string,
       range: serializedBeatLine.range as IRange,
       cueId: beatLine.getCustomData("cue_id")
-    }
-  }
-
-  private getAlertInfo(status: number) {
-    switch (status) {
-      case OSC.STATUS.IS_NOT_INITIALIZED:
-        return {
-          title: "Initialization Error",
-          message: "Try again. Is \"q-neiform bridge serve\" running?"
-        }
-      case OSC.STATUS.IS_CONNECTING:
-        return {
-          title: "Connection Error",
-          message: "Try again. Is \"q-neiform bridge serve\" running?"
-        }
-      default:
-        return {
-          title: "Unknown Error",
-          message: "Closing plugin. Reopen and try again."
-        }
     }
   }
 }

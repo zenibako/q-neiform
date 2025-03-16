@@ -31,14 +31,14 @@ export default class BridgeServe extends Command {
       })
     })
 
-    const qlab = new QLabWorkspace(osc, this)
+    const qlab = new QLabWorkspace(osc, host, `${port}`, this)
 
     try {
-      const response = await qlab.connect()
+      const response = await qlab.initialize()
       this.log(response)
       qlab.listen()
     } catch (e) {
-      this.log("Error: " + ((e as Error).message ?? JSON.stringify(e)))
+      this.log("Error: " + JSON.stringify(e, null, 1))
       throw e
     }
   }

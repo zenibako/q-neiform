@@ -1,13 +1,12 @@
-import { ICue, ICueApp, ICues } from "../../domain/abstractions/i-cues";
-import ILogger from "../../domain/abstractions/i-logger";
+import { ICue, ICues } from "../../domain/abstractions/i-cues";
 import { IOscClient } from "../../domain/abstractions/i-osc";
-import { Cue, TriggerCue } from "../../domain/entities/cue";
+import { TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 
 export default class Cues implements ICues {
   private cueArray: ICue[] = []
 
-  constructor(private oscClient: IOscClient, private logger: ILogger) { }
+  constructor(private oscClient: IOscClient) { }
 
   *[Symbol.iterator](): IterableIterator<ICue> {
     for (let i = 0; i < this.cueArray.length; ++i) {
@@ -45,7 +44,6 @@ export default class Cues implements ICues {
         continue
       }
 
-
       const lineCharacterName = line.getType() == LineType.CHARACTER ? line.text : null
       let cueName = line.text
       let isDifferentCharacter = false
@@ -62,7 +60,6 @@ export default class Cues implements ICues {
       const lineCue = new TriggerCue(cueName, line.cueId)
 
       if (isLastLine) {
-        this.logger.log("Pushing buffer cue since this is the last line...")
         let pushCue: ICue
         if (bufferCue) {
           bufferCue.name += cueName
@@ -73,7 +70,6 @@ export default class Cues implements ICues {
         pushCue.lines.push(line)
         reset(pushCue)
       } else if (isDifferentCharacter) {
-        this.logger.log("Pushing buffer cue since this is a different character...")
         reset(bufferCue)
       }
 

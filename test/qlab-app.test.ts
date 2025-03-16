@@ -63,9 +63,9 @@ describe('Bridge WS client with UDP server', () => {
 
     osc = new OSC({ plugin: mockBridgePlugin })
 
-    qlab = new QLabWorkspace(osc, mockLogger)
+    qlab = new QLabWorkspace(osc, "localhost", "53000", mockLogger)
 
-    await qlab.connect()
+    await qlab.initialize()
   })
 
   afterEach(() => {

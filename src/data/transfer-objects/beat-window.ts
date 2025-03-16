@@ -9,6 +9,14 @@ export default class BeatWebSocketWindow {
 
   constructor(host: string, port: string, callback: (osc: unknown) => void) {
     Beat.custom.handleOpen = callback
+    Beat.custom.handleError = (arg) => {
+      const [error, status] = arg as [string, number]
+      Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
+      const { title, message } = this.getAlertInfo(status)
+      Beat.alert(title, message)
+      throw new Error(error)
+    }
+
     this.window = Beat.htmlWindow(`
 <span id="status"></span>
 <script type="text/javascript" src="lib/osc.min.js"></script>
@@ -23,12 +31,10 @@ export default class BeatWebSocketWindow {
   })
 
   function sendMessage(message, replyAddress = "*") {
-    const replyListener = osc.on(replyAddress, (reply) => {
+    const replyListener = osc.on(replyAddress, ({ address, args }) => {
       // osc.off(replyAddress, replyListener)
-      Beat.log("Reply received in window.")
-      Beat.callAndWait((arg) => Beat.custom.handleReply(arg), reply).then(
-        (response) => Beat.log("Reply processed in plugin: " + response)
-      )
+      Beat.log("Reply received in window: " + JSON.stringify({ address, args }, null, 1))
+      Beat.call((replyMessage) => Beat.custom.handleReply(replyMessage), { address, args })
     })
     osc.send(message)
     Beat.log("Message sent.")
@@ -42,21 +48,17 @@ export default class BeatWebSocketWindow {
   osc.on("error", (error) => throwError(error))
   osc.on("open", () => Beat.call((arg) => Beat.custom.handleOpen(arg), osc))
   osc.open()
-</script>`, WIDTH, HEIGHT, this.close
+</script>`, WIDTH, HEIGHT, () => {
+        Beat.log("Closed window.")
+      }
     )
+
     this.window.gangWithDocumentWindow()
   }
 
-  send(messages: IOscMessage[], callback: (message: unknown) => string): void {
+  send(messages: IOscMessage[], callback: (message: unknown) => void): void {
     if (callback) {
       Beat.custom.handleReply = callback
-    }
-
-    Beat.custom.handleError = (arg) => {
-      const [error, status] = arg as [string, number]
-      const { title, message } = this.getAlertInfo(status)
-      Beat.alert(title, message)
-      throw new Error(error)
     }
 
     const messageStrings = messages.map(({ address, args }) => {
@@ -102,8 +104,9 @@ export default class BeatWebSocketWindow {
   }
 
   close() {
-    this.window?.close()
-    Beat.end()
+    Beat.log("Closing window and connection...")
+    this.window.runJS(`osc.close()`)
+    this.window.close()
   }
 }
 

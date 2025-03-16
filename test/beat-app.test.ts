@@ -3,7 +3,6 @@ import BeatApp, { Mode } from '../src/data/sources/beat-app'
 import { IOscMessage, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
 import { OSC_DICTIONARY } from '../src/data/sources/qlab-app'
-import { connect } from 'http2'
 
 const mode = Mode.DEVELOPMENT
 
@@ -14,11 +13,6 @@ const serverSettings = {
   host: "localhost",
   port: "8080",
   password: "12345"
-}
-
-const connectData = {
-  workspace_id: "12345",
-  data: "ok:view|edit|control"
 }
 
 const { reply: replyDict, connect: connectDict, new: newDict } = OSC_DICTIONARY
@@ -41,8 +35,15 @@ const mockCustom = mock<BeatCustomFunctions>()
 mockBeatApi.custom = mockCustom
 globalThis.Beat = mockBeatApi
 
-
 const docSettingsSpy = jest.spyOn(Beat, "getDocumentSetting")
+
+const connectMessage = new OSC.Message(
+  replyDict.address + connectDict.address,
+  JSON.stringify({
+    workspace_id: "12345",
+    data: "ok:view|edit|control"
+  })
+)
 
 let messagesToSend: IOscMessage[] = []
 
@@ -53,7 +54,6 @@ describe('Send messages with OSC client', () => {
   const mockNoReplyMessage = mock<IOscMessage>()
 
   beforeEach(async () => {
-
     mockBeatApi.log.mockImplementation((message) => {
       if (mode !== Mode.DEVELOPMENT) {
         return
@@ -63,16 +63,16 @@ describe('Send messages with OSC client', () => {
     docSettingsSpy.mockReturnValue(serverSettings)
     beat = new BeatApp(mode)
 
-    mockBeatApi.htmlWindow.mockImplementationOnce(() => {
+    mockBeatApi.htmlWindow.mockImplementation(() => {
       mockBeatApi.custom.handleOpen!(new OSC())
       return mockBeatHtmlWindow
     })
+
     mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-      mockBeatApi.custom.handleReply!(new OSC.Message(replyDict.address + connectDict.address, JSON.stringify(connectData)))
+      mockBeatApi.custom.handleReply!(connectMessage)
     })
 
-    await beat.open()
-    await beat.connect()
+    await beat.initialize()
 
     mockReplyMessage.address = "/test1"
     mockReplyMessage.args = ["string"]
@@ -89,27 +89,30 @@ describe('Send messages with OSC client', () => {
 
   describe('and wait for reply', () => {
     test('one message', async () => {
-      mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-        mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
-      })
+      mockBeatHtmlWindow.runJS
+        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
+        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData))))
+
       const reply = await beat.send(mockReplyMessage)
       expect(reply).toBeTruthy()
     })
 
 
     test('two messages', async () => {
-      mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-        mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData)))
-      })
+      mockBeatHtmlWindow.runJS
+        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
+        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(new OSC.Message(replyNewAddress, JSON.stringify(replyNewData))))
+
       const replies = await beat.send(mockReplyMessage, mockNoReplyMessage)
       expect(replies).toBeTruthy()
     })
 
     test('error', async () => {
       const error = "Error occurred."
-      mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-        mockBeatApi.custom.handleError!([error, OSC.STATUS.IS_OPEN])
-      })
+      mockBeatHtmlWindow.runJS
+        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
+        .mockImplementationOnce(() => mockBeatApi.custom.handleError!([error, OSC.STATUS.IS_OPEN]))
+
       try {
         await beat.send(...messagesToSend)
         fail()

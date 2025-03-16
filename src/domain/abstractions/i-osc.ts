@@ -1,6 +1,6 @@
 export interface IOscClient {
-  connect(): Promise<string>
-  send(...messages: (IOscMessage | IOscBundle)[]): Promise<string | null>
+  initialize(): Promise<string>
+  send(...messages: IOscMessage[]): Promise<string | null>
   getDictionary(): IOscDictionary
   getTargetAddress(address: string): string
 }
@@ -23,7 +23,8 @@ export interface IOscDictionary {
 
 export interface IOscServer {
   id?: string
-  connect(): Promise<string>
+  host: string
+  port: string
   getDictionary(): IOscDictionary
   setIdFromConnectResponse(replyResponse: string): void
   getTargetAddress(address?: string): string
@@ -32,9 +33,5 @@ export interface IOscServer {
 export interface IOscMessage {
   address: string,
   args: (string | number)[]
-  hasReply: boolean
-}
-
-export interface IOscBundle {
-  messages: IOscMessage[]
+  hasReply?: boolean
 }
