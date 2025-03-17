@@ -60,9 +60,11 @@ describe('Bridge WS client with UDP server', () => {
     const mockMessage1 = mock<IOscMessage>()
     mockMessage1.address = "/test1"
     mockMessage1.args = ["string"]
+    mockMessage1.dict = OSC_DICTIONARY.new
     const mockMessage2 = mock<IOscMessage>()
     mockMessage2.address = "/test2"
     mockMessage2.args = [123]
+    mockMessage2.dict = OSC_DICTIONARY.mode
     messagesToSend = [mockMessage1, mockMessage2]
 
     mockBridgePlugin.open.mockImplementation(() => osc.send(replyMessage))
@@ -82,7 +84,7 @@ describe('Bridge WS client with UDP server', () => {
 
     osc = new OSC({ plugin: mockBridgePlugin })
 
-    qlab = new QLabWorkspace(osc, mockLogger)
+    qlab = new QLabWorkspace(osc, "localhost", "1234", mockLogger)
     connectResponse = await qlab.connect()
     expect(connectResponse).toBe("Successfully connected.")
   })

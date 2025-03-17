@@ -28,9 +28,6 @@ let osc: OSC
 
 const mockBridgePlugin = mock<OSC.BridgePlugin>()
 
-const mockReplyMessage = mock<IOscMessage>()
-const mockNoReplyMessage = mock<IOscMessage>()
-
 const replyConnectMessage = new OSC.Message(replyConnectAddress, JSON.stringify(replyConnectData))
 const onSpy = jest.spyOn(OSC.prototype, "on")
 
@@ -43,14 +40,28 @@ const callOnListenerCallbacks = (message: OSC.Message) => {
   }
 }
 
-describe('Bridge WS client with UDP server', () => {
-  beforeEach(async () => {
-    mockReplyMessage.address = "/test1"
-    mockReplyMessage.args = ["string"]
-    mockReplyMessage.hasReply = true
-    mockNoReplyMessage.address = "/test2"
-    mockNoReplyMessage.args = [123]
+const test1Dict = {
+  address: "/test1",
+  hasReply: true
+}
 
+const test2Dict = {
+  address: "/test2",
+  hasReply: false
+}
+
+describe('Bridge WS client with UDP server', () => {
+  const mockReplyMessage: IOscMessage = {
+    address: test1Dict.address,
+    args: ["string"],
+    listenOn: replyNewAddress
+  }
+  const mockNoReplyMessage: IOscMessage = {
+    address: test2Dict.address,
+    args: [123],
+  }
+
+  beforeEach(async () => {
     mockBridgePlugin.open.mockImplementationOnce(() => {
       const [event, callback] = onSpy.mock.calls[0]!
       expect(event).toBe("open")

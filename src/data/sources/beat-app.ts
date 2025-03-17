@@ -91,7 +91,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   private async connectToBridge(): Promise<string> {
-    const { connect: { address } } = OSC_DICTIONARY
+    const { reply: { address: replyAddress }, connect } = OSC_DICTIONARY
     let { password } = this.loadServerConfiguration()
     if (!password) {
       password = this.promptUserForPassword()
@@ -99,7 +99,11 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
     try {
       const connectResponse = JSON.parse(
-        await this.sendMessages([{ address, args: [password!], hasReply: true }])
+        await this.sendMessages([{
+          address: connect.address,
+          args: [password!],
+          listenOn: replyAddress + connect.address,
+        }])
       )
       this.oscServer?.setIdFromConnectResponse(connectResponse)
       this.saveServerConfiguration({ password })
@@ -178,7 +182,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       throw new Error("No OSC server found.")
     }
 
-    const replyMessages = messages.filter(({ hasReply }) => hasReply)
+    const replyMessages = messages.filter(({ listenOn }) => !!listenOn)
     return new Promise((resolve, reject) => {
       let repliesRemaining = replyMessages.length
       const replyStrings: string[] = []
@@ -217,8 +221,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
         return
       }
 
-      const { reply: replyDict } = OSC_DICTIONARY
-      Beat.log(`Waiting for replies:\n${replyMessages.map(({ address }) => ` - ${replyDict.address + address}`).join("\n")}`)
+      Beat.log(`Waiting for replies:\n${replyMessages.map(({ listenOn: replyAddress }) => ` - ${replyAddress}`).join("\n")}`)
     })
   }
 

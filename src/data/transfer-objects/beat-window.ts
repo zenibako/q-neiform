@@ -1,5 +1,6 @@
 import OSC from "osc-js"
 import { IOscMessage } from "../../domain/abstractions/i-osc"
+import { OSC_DICTIONARY } from "../sources/qlab-app"
 
 const WIDTH = 300
 const HEIGHT = 50
@@ -60,20 +61,19 @@ export default class BeatWebSocketWindow {
     if (callback) {
       Beat.custom.handleReply = callback
     }
-
-    const messageStrings = messages.map(({ address, args }) => {
+    
+    let onAddress = "*"
+    const messageStrings = messages.map(({ address, args, listenOn }) => {
       const messageArgs = [address, ...args].map((arg) => !isNaN(Number(arg.toString())) ? arg : `"${arg}"`)
+      if (listenOn) {
+        onAddress = listenOn
+      }
       return `new OSC.Message(${messageArgs.join(",")})`
     })
 
-    let jsString = "sendMessage"
-    if (messageStrings.length === 1) {
-      const [messageString] = messageStrings
-      jsString += `(${messageString})`
-    } else {
-      jsString += `(new OSC.Bundle([${messageStrings.join(",")}]))`
-    }
+    const bundleString = `new OSC.Bundle([${messageStrings.join(",")}])`
 
+    const jsString = `sendMessage(${bundleString}, "${onAddress}")`
     Beat.log(`Executing in window: ${jsString}`)
     this.window.runJS(jsString)
   }

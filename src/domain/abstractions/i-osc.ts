@@ -2,22 +2,21 @@ export interface IOscClient {
   initialize(): Promise<string>
   send(...messages: IOscMessage[]): Promise<string | null>
   getDictionary(): IOscDictionary
-  getTargetAddress(address: string): string
 }
 
 export interface IOscDictionaryEntry {
   address: string,
+  hasReply?: boolean,
   replyDataExample?: string
 }
 
 export interface IOscDictionary {
-  connect: IOscDictionaryEntry,
-  reply: IOscDictionaryEntry,
-  workspace: IOscDictionaryEntry,
-  new: IOscDictionaryEntry,
-  //selectedCues: IOscDictionaryEntry,
-  name: IOscDictionaryEntry,
-  mode: IOscDictionaryEntry,
+  connect: IOscDictionaryEntry
+  reply: IOscDictionaryEntry
+  workspace: IOscDictionaryEntry
+  new: IOscDictionaryEntry
+  name: IOscDictionaryEntry
+  mode: IOscDictionaryEntry
   [index: string]: IOscDictionaryEntry
 }
 
@@ -28,10 +27,11 @@ export interface IOscServer {
   getDictionary(): IOscDictionary
   setIdFromConnectResponse(replyResponse: string): void
   getTargetAddress(address?: string): string
+  getReplyAddress(address?: string): string
 }
 
 export interface IOscMessage {
-  address: string,
+  address: string
   args: (string | number)[]
-  hasReply?: boolean
+  listenOn?: string
 }

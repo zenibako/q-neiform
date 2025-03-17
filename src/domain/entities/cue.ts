@@ -1,13 +1,13 @@
-import { Line } from "../../data/repositories/scripts";
-import { CueType } from "../../data/sources/qlab-app";
-import { ICue } from "../abstractions/i-cues";
-import { IOscDictionary, IOscMessage } from "../abstractions/i-osc";
+import { Line } from "../../data/repositories/scripts"
+import { CueType } from "../../data/sources/qlab-app"
+import { ICue } from "../abstractions/i-cues"
+import { IOscClient, IOscMessage } from "../abstractions/i-osc"
 
 export class CueAction implements IOscMessage {
   constructor(
     public readonly address: string,
     public readonly args: (string | number)[] = [],
-    public readonly hasReply = false
+    public readonly listenOn?: string
   ) { }
 }
 
@@ -23,24 +23,23 @@ export class Cue implements ICue {
     public name: string,
     public type: CueType,
     public id: string | null = null,
-  ) { }
+  ) {
+  }
 
-  getActions(dict: IOscDictionary) {
+  getActions(oscClient: IOscClient) {
+    const dict = oscClient.getDictionary()
     const actions: CueAction[] = []
     if (!this.id) {
-      actions.push(new CueAction(dict.new.address, [this.type], true))
+      actions.push(new CueAction(dict.new.address, [this.type], dict.new.address))
     }
 
-    actions.push(new CueAction(this.getAddress(dict.name.address), [this.name]))
+    const prefix = `/cue/${(this.id?.length ? this.id : "selected")}`
+    actions.push(new CueAction(prefix + dict.name.address, [this.name]))
     if (this.mode) {
-      actions.push(new CueAction(this.getAddress(dict.mode.address), [this.mode]))
+      actions.push(new CueAction(prefix + dict.mode.address, [this.mode]))
     }
 
     return actions
-  }
-
-  getAddress(path: string) {
-    return `/cue/${(this.id?.length ? this.id : "selected") + path}`
   }
 
   /*

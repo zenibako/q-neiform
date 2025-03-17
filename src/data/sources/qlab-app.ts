@@ -134,7 +134,6 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
   }
 
   send(...messages: IOscMessage[]): Promise<string | null> {
-    const replyMessages = messages.filter(({ hasReply }) => hasReply)
     const oscMessages = messages.map(({ address, args }) => new OSC.Message(address, ...args))
     if (!oscMessages?.length) {
       throw new Error("No messages passed as send input.")
@@ -147,16 +146,23 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
 
     const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
     return new Promise((resolve) => {
-      const { reply } = OSC_DICTIONARY
-      let repliesRemaining = replyMessages.length
-      if (repliesRemaining) {
-        this.osc.on(reply.address, () => {
+      let repliesRemaining = 0
+      for (const { listenOn } of messages) {
+        if (!listenOn) {
+          continue
+        }
+
+        repliesRemaining++
+        this.osc.on(this.getReplyAddress(listenOn), () => {
           repliesRemaining--
-          if (repliesRemaining === 0) {
-            resolve("All replies heard")
+          if (repliesRemaining !== 0) {
+            return
           }
+          
+          resolve("All replies heard")
         })
       }
+
       this.osc.send(payload, { receiver: "ws" })
       if (repliesRemaining === 0) {
         resolve("No replies expected.")
@@ -204,6 +210,11 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     }
 
     return targetAddress
+  }
+
+  getReplyAddress(address: string): string {
+    const { reply } = OSC_DICTIONARY
+    return reply.address + this.getTargetAddress(address) + "/*"
   }
 
 // private queue: OscBundle[] = []

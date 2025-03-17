@@ -1,5 +1,5 @@
 import { Line } from "../../data/repositories/scripts"
-import { IOscDictionary, IOscMessage } from "./i-osc"
+import { IOscClient, IOscMessage } from "./i-osc"
 
 export interface ICueApp {
   name: string
@@ -20,7 +20,7 @@ export interface ICue {
   // mode: string,
   // address: string
 
-  getActions(dict: IOscDictionary): IOscMessage[]
+  getActions(oscClient: IOscClient): IOscMessage[]
 }
 
 export interface ICueCommandBundle {
