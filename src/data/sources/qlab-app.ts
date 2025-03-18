@@ -37,7 +37,7 @@ export type CueType =
   "cue cart"
 
 export const OSC_DICTIONARY: IOscDictionary = {
-  cues: { address: "/cues" },
+  cue: { address: "/cue" },
   connect: { address: "/connect" },
   reply: { address: "/reply" },
   workspace: { address: "/workspace" },

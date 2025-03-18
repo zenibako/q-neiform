@@ -36,7 +36,6 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   async initialize(): Promise<string> {
     await this.openWebSocket()
     await this.connectToBridge()
-    this.closeWebSocket()
     return "Initialized successfully."
   }
 
@@ -59,10 +58,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       throw new Error("No OSC server found.")
     }
 
-    await this.openWebSocket()
-    await this.connectToBridge()
     const response = await this.sendMessages(messages)
-    this.closeWebSocket()
     return response
   }
 

@@ -12,7 +12,7 @@ export interface IOscDictionaryEntry {
 }
 
 export interface IOscDictionary {
-  cues: IOscDictionaryEntry
+  cue: IOscDictionaryEntry
   connect: IOscDictionaryEntry
   reply: IOscDictionaryEntry
   workspace: IOscDictionaryEntry

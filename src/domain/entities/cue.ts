@@ -35,7 +35,7 @@ export class Cue implements ICue {
       actions.push(new CueAction(newAddress, [this.type], newAddress))
     }
 
-    const prefix = oscClient.getTargetAddress(dict.cues.address + (this.id?.length ? this.id : "selected"))
+    const prefix = oscClient.getTargetAddress(dict.cue.address + "/" + (this.id?.length ? this.id : "selected"))
     actions.push(new CueAction(prefix + dict.name.address, [this.name]))
     if (this.mode) {
       actions.push(new CueAction(prefix + dict.mode.address, [this.mode]))
