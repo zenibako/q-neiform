@@ -26,6 +26,6 @@ export default class BeatPlugin {
       Beat.end()
     }
 
-    beat.log("Plugin is loaded.")
+    beat.log("Plugin is initialized.")
   }
 }
