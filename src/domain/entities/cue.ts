@@ -8,7 +8,8 @@ export class CueAction implements IOscMessage {
     public readonly address: string,
     public readonly args: (string | number)[] = [],
     public readonly listenOn?: string
-  ) { }
+  ) {
+  }
 }
 
 export class Cue implements ICue {
@@ -30,10 +31,11 @@ export class Cue implements ICue {
     const dict = oscClient.getDictionary()
     const actions: CueAction[] = []
     if (!this.id) {
-      actions.push(new CueAction(dict.new.address, [this.type], dict.new.address))
+      const newAddress = oscClient.getTargetAddress(dict.new.address)
+      actions.push(new CueAction(newAddress, [this.type], newAddress))
     }
 
-    const prefix = `/cue/${(this.id?.length ? this.id : "selected")}`
+    const prefix = oscClient.getTargetAddress(dict.cues.address + (this.id?.length ? this.id : "selected"))
     actions.push(new CueAction(prefix + dict.name.address, [this.name]))
     if (this.mode) {
       actions.push(new CueAction(prefix + dict.mode.address, [this.mode]))

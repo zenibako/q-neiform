@@ -2,27 +2,7 @@ import { mock } from 'jest-mock-extended'
 import { IOscClient } from '../src/domain/abstractions/i-osc'
 import Cues from '../src/data/repositories/cues'
 import { Line } from '../src/data/repositories/scripts'
-
-const dict = {
-  connect: {
-    address: "/connect"
-  },
-  workspace: {
-    address: "/workspace"
-  },
-  name: {
-    address: "/name"
-  },
-  new: {
-    address: "/new"
-  },
-  mode: {
-    address: "/mode"
-  },
-  reply: {
-    address: "/reply"
-  }
-}
+import { OSC_DICTIONARY } from '../src/data/sources/qlab-app'
 
 const mockOscClient = mock<IOscClient>()
 
@@ -33,7 +13,7 @@ const line4 = "Who are you, lady?"
 
 describe('Push cues with OSC client', () => {
   beforeEach(async () => {
-    mockOscClient.getDictionary.mockReturnValue(dict)
+    mockOscClient.getDictionary.mockReturnValue(OSC_DICTIONARY)
     mockOscClient.send.mockResolvedValueOnce("1234")
     mockOscClient.send.mockResolvedValueOnce("5678")
   })

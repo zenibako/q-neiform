@@ -2,6 +2,7 @@ export interface IOscClient {
   initialize(): Promise<string>
   send(...messages: IOscMessage[]): Promise<string | null>
   getDictionary(): IOscDictionary
+  getTargetAddress(address?: string): string
 }
 
 export interface IOscDictionaryEntry {
@@ -11,6 +12,7 @@ export interface IOscDictionaryEntry {
 }
 
 export interface IOscDictionary {
+  cues: IOscDictionaryEntry
   connect: IOscDictionaryEntry
   reply: IOscDictionaryEntry
   workspace: IOscDictionaryEntry

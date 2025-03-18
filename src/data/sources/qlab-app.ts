@@ -37,6 +37,7 @@ export type CueType =
   "cue cart"
 
 export const OSC_DICTIONARY: IOscDictionary = {
+  cues: { address: "/cues" },
   connect: { address: "/connect" },
   reply: { address: "/reply" },
   workspace: { address: "/workspace" },
@@ -71,7 +72,8 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     public readonly host: string,
     public readonly port: string,
     private logger: ILogger
-  ) { }
+  ) {
+  }
 
   initialize(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -158,7 +160,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
           if (repliesRemaining !== 0) {
             return
           }
-          
+
           resolve("All replies heard")
         })
       }
@@ -216,21 +218,4 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     const { reply } = OSC_DICTIONARY
     return reply.address + this.getTargetAddress(address) + "/*"
   }
-
-// private queue: OscBundle[] = []
-// private mappingByCueNumber: Record<number, string> = {}
-/*
-async push(...bundles: ICueCommandBundle[]) {
-  console.log(bundles)
-  return []
-}
- 
-async pull(...ids: string[]) {
-  console.log(ids)
-  return []
-}
- 
-async select() {
-}
-*/
 }
