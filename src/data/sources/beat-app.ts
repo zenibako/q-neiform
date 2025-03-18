@@ -183,12 +183,11 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       let repliesRemaining = replyMessages.length
       const replyStrings: string[] = []
       this.window?.send(messages, (replyMessage) => {
-        const { args } = replyMessage as IOscMessage
+        const { args } = replyMessage
         if (!args?.length) {
           throw new Error(`No args returned.`)
         }
 
-        Beat.log(`Received send reply in plugin with args: ${args}`)
         const [responseBody] = args
         const responseBodyString = JSON.stringify(responseBody)
         const { status } = JSON.parse(responseBodyString)

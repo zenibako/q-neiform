@@ -32,9 +32,10 @@ export default class BeatWebSocketWindow {
 
   function sendMessage(message, replyAddress = "*") {
     const replyListener = osc.on(replyAddress, ({ address, args }) => {
-      // osc.off(replyAddress, replyListener)
-      Beat.log("Reply received in window: " + JSON.stringify({ address, args }, null, 1))
-      Beat.call((replyMessage) => Beat.custom.handleReply(replyMessage), { address, args })
+      osc.off(replyAddress, replyListener)
+      const reply = { address, args }
+      Beat.log("Received send reply in window: " + JSON.stringify(reply, null, 1))
+      Beat.call((arg) => Beat.custom.handleReply(JSON.stringify(arg)), reply)
     })
     osc.send(message)
     Beat.log("Message sent.")
@@ -56,9 +57,13 @@ export default class BeatWebSocketWindow {
     this.window.gangWithDocumentWindow()
   }
 
-  send(messages: IOscMessage[], callback: (message: unknown) => void): void {
+  send(messages: IOscMessage[], callback: (message: IOscMessage) => void): void {
     if (callback) {
-      Beat.custom.handleReply = callback
+      Beat.custom.handleReply = (arg: unknown) => {
+        const replyMessage = JSON.parse(arg as string) as IOscMessage
+        Beat.log(`Received send reply in plugin: ${JSON.stringify(replyMessage, null, 1)}`)
+        callback(replyMessage)
+      }
     }
     
     let onAddress = "*"
