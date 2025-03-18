@@ -13,7 +13,7 @@ const logger = mock<ILogger>()
 describe('Push cues with OSC client', () => {
     test('one cue', () => {
       const scripts = new Scripts(scriptApp, logger)
-      const cues = new Cues(oscClient)
+      const cues = new Cues(oscClient, logger)
       const useCase = new PushCuesFromScript(scripts, cues, logger)
 
       useCase.execute()

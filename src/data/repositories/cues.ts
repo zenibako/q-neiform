@@ -1,4 +1,5 @@
 import { ICue, ICues } from "../../domain/abstractions/i-cues";
+import ILogger from "../../domain/abstractions/i-logger";
 import { IOscClient } from "../../domain/abstractions/i-osc";
 import { TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
@@ -6,7 +7,7 @@ import { Line, LineType } from "./scripts";
 export default class Cues implements ICues {
   private cueArray: ICue[] = []
 
-  constructor(private oscClient: IOscClient) { }
+  constructor(private oscClient: IOscClient, private logger: ILogger) { }
 
   *[Symbol.iterator](): IterableIterator<ICue> {
     for (let i = 0; i < this.cueArray.length; ++i) {

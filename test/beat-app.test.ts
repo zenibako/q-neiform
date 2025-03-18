@@ -102,7 +102,6 @@ describe('Send messages with OSC client', () => {
   describe('and wait for reply', () => {
     test('one message', async () => {
       mockBeatHtmlWindow.runJS
-        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
         .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(new OSC.Message(mockReplyAddress, JSON.stringify(replyNewData))))
 
       const reply = await beat.send(mockReplyMessage)
@@ -112,7 +111,6 @@ describe('Send messages with OSC client', () => {
 
     test('two messages', async () => {
       mockBeatHtmlWindow.runJS
-        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
         .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(new OSC.Message(mockReplyAddress, JSON.stringify(replyNewData))))
 
       console.log("-- START TWO MESSAGES TEST")
@@ -124,7 +122,6 @@ describe('Send messages with OSC client', () => {
     test('error', async () => {
       const error = "Error occurred."
       mockBeatHtmlWindow.runJS
-        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(connectMessage))
         .mockImplementationOnce(() => mockBeatApi.custom.handleError!([error, OSC.STATUS.IS_OPEN]))
 
       try {

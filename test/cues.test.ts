@@ -3,8 +3,10 @@ import { IOscClient } from '../src/domain/abstractions/i-osc'
 import Cues from '../src/data/repositories/cues'
 import { Line } from '../src/data/repositories/scripts'
 import { OSC_DICTIONARY } from '../src/data/sources/qlab-app'
+import ILogger from '../src/domain/abstractions/i-logger'
 
 const mockOscClient = mock<IOscClient>()
+const mockLogger = mock<ILogger>()
 
 const line1 = "ALICE"
 const line2 = "What's up Bob?"
@@ -24,7 +26,7 @@ describe('Push cues with OSC client', () => {
       { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } }
     ].map(line => new Line(line))
 
-    const cues = new Cues(mockOscClient)
+    const cues = new Cues(mockOscClient, mockLogger)
     cues.addFromLines(lines)
     await cues.push()
     
@@ -44,7 +46,7 @@ describe('Push cues with OSC client', () => {
       { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
     ].map(line => new Line(line))
 
-    const cues = new Cues(mockOscClient)
+    const cues = new Cues(mockOscClient, mockLogger)
     cues.addFromLines(lines)
     await cues.push()
 

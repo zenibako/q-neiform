@@ -11,7 +11,7 @@ export default class BeatPlugin {
   async initialize() {
     beat.log("Starting plugin...")
     const scripts = new Scripts(beat, beat)
-    const cues = new Cues(beat)
+    const cues = new Cues(beat, beat)
 
     const menu = new Menu("QLab", [
       new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues, beat)),
