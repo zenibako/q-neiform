@@ -103,6 +103,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       )
       this.oscServer?.setIdFromConnectResponse(connectResponse)
       this.saveServerConfiguration({ password })
+      this.window?.updateStatusDisplay("Connected!")
       return "Successfully connected."
     } catch (e) {
       this.saveServerConfiguration({ password: null })
