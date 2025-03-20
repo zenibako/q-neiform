@@ -2,6 +2,7 @@
   "name": "q-neiform",
   "scripts": {
     "test": "jest",
+    "watch": "jest --watch",
     "build:beat:esbuild": "./node_modules/.bin/esbuild bin/beat/plugin.ts --bundle --outdir=$HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin",
     "build:beat:webpack": "npx webpack && cp -a ./dist/beat/. $HOME/Library/Containers/fi.KAPITAN.Beat/Data/Library/Application\\ Support/Beat/Plugins/QLab.beatPlugin"
   },
