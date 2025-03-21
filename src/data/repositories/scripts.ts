@@ -1,5 +1,5 @@
 import ILogger from "../../domain/abstractions/i-logger";
-import { IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script";
+import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
@@ -40,6 +40,17 @@ export class Line {
 
 export class Scripts {
   constructor(private scriptApp: IScriptApp, private logger: ILogger) { }
+
+  listenForSelection(callback: (range: IRange) => void) {
+    this.scriptApp.listenForSelection((range) => {
+      this.scriptApp.toggleHighlight("#1E90FF", range)
+      callback(range)
+    })
+  }
+
+  stopListeningForSelection() {
+    this.scriptApp.stopListeningForSelection()
+  }
 
   getContextFromSelection(): Line[] {
     const contextLinesFromApp = this.scriptApp.getSelectedLines()

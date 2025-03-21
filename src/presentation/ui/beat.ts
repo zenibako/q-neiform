@@ -3,9 +3,10 @@ import { Scripts } from "../../data/repositories/scripts";
 import BeatPlugin, { Mode } from "../../data/sources/beat-plugin"
 import { Menu, MenuItem } from "../../domain/entities/menu";
 import ClearCueMappings from "../../domain/use-cases/clear-mappings";
+import DefineCueFromSelection from "../../domain/use-cases/define-cues";
 import PushCuesFromScript from "../../domain/use-cases/push-cues";
 
-const plugin = new BeatPlugin(Mode.PRODUCTION)
+const plugin = new BeatPlugin(Mode.DEVELOPMENT)
 
 async function initialize() {
   plugin.debug("Starting plugin...")
@@ -14,6 +15,7 @@ async function initialize() {
 
   const menu = new Menu("QLab", [
     new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues, plugin)),
+    new MenuItem("Highlight Cues", new DefineCueFromSelection(scripts, cues, plugin)),
     new MenuItem("Clear Cue Mappings", new ClearCueMappings(scripts, plugin))
   ])
 

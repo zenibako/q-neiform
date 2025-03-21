@@ -13,6 +13,9 @@ export interface IScriptAppLine {
 }
 
 export interface IScriptApp {
+  listenForSelection(callback: (range: IRange) => void): void
+  stopListeningForSelection(): void
+  toggleHighlight(color: string, range: IRange): void
   mountMenu(menu: Menu): void
   getCurrentLine(): IScriptAppLine
   getSelectedLines(): IScriptAppLine[]

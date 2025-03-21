@@ -25,7 +25,7 @@ export default class Cues implements ICues {
     return []
   }
 
-  addFromLines(lines: Line[]) {
+  addFromLines(lines: Line[]): ICue[] {
     let bufferCue, bufferCharacterName
 
     const cuesToAdd: ICue[] = []
@@ -84,6 +84,7 @@ export default class Cues implements ICues {
     }
 
     this.cueArray.push(...cuesToAdd)
+    return cuesToAdd
   }
 
   async push(): Promise<void> {

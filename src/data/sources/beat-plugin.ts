@@ -47,7 +47,8 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
     return "Initialized successfully."
   }
 
-  startListeningForSelection(callback?: () => void): void {
+  listenForSelection(callback?: ({ location, length }: IRange) => void): void {
+    Beat.onSelectionChangeDisabled = false
     Beat.onSelectionChange((location, length) => {
       this.debug(JSON.stringify({
         character: Beat.currentLine.characterName(),
@@ -56,9 +57,25 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
         length
       }, null, 1))
       if (callback) {
-        callback()
+        callback({ location, length })
       }
     })
+  }
+
+  stopListeningForSelection(): void {
+    Beat.onSelectionChangeDisabled = true
+  }
+
+  colorMap = new Map<IRange, string>()
+  toggleHighlight(color: string, range: IRange) {
+    const currentColor = this.colorMap.get(range)
+    const newColor = currentColor ? "" : color
+    Beat.textBackgroundHighlight(newColor, range.location, range.length)
+    if (newColor.length) {
+      this.colorMap.delete(range)
+    } else {
+      this.colorMap.set(range, color)
+    }
   }
 
   async send(...messages: IOscMessage[]): Promise<string[]> {
@@ -259,7 +276,7 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
 
     const beatMenu = Beat.menu(menu.title, menuItems)
     beatMenu.addItem(Beat.separatorMenuItem())
-    beatMenu.addItem(Beat.menuItem("Watch Selection", ["ctrl", "w"], () => this.startListeningForSelection()))
+    beatMenu.addItem(Beat.menuItem("Watch Selection", ["ctrl", "w"], () => this.listenForSelection()))
     this.debug("Mounted menu items.")
   }
 
