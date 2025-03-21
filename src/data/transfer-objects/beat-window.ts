@@ -11,7 +11,7 @@ export default class BeatWebSocketWindow {
     Beat.custom.handleOpen = callback
     Beat.custom.handleError = (arg) => {
       const [error, status] = arg as [string, number]
-      Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
+      // Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
       const { title, message } = this.getAlertInfo(status)
       Beat.alert(title, message)
       throw new Error(error)
@@ -22,7 +22,7 @@ export default class BeatWebSocketWindow {
 <script type="text/javascript" src="lib/osc.min.js"></script>
 <script type="text/javascript">
   function updateStatusDisplay(message) {
-    Beat.log(message)
+    // Beat.log(message)
     document.querySelector("#status").textContent = message
   }
 
@@ -34,11 +34,11 @@ export default class BeatWebSocketWindow {
     const replyListener = osc.on(replyAddress, ({ address, args }) => {
       osc.off(replyAddress, replyListener)
       const reply = { address, args }
-      Beat.log("Received send reply in window: " + JSON.stringify(reply, null, 1))
+      // Beat.log("Received send reply in window: " + JSON.stringify(reply, null, 1))
       Beat.call((arg) => Beat.custom.handleReply(JSON.stringify(arg)), reply)
     })
     osc.send(message)
-    Beat.log("Message sent.")
+    // Beat.log("Message sent.")
   }
 
   function throwError(error) {
@@ -61,7 +61,7 @@ export default class BeatWebSocketWindow {
     if (callback) {
       Beat.custom.handleReply = (arg: unknown) => {
         const replyMessage = JSON.parse(arg as string) as IOscMessage
-        Beat.log(`Received send reply in plugin: ${JSON.stringify(replyMessage, null, 1)}`)
+        // Beat.log(`Received send reply in plugin: ${JSON.stringify(replyMessage, null, 1)}`)
         callback(replyMessage)
       }
     }
@@ -76,7 +76,7 @@ export default class BeatWebSocketWindow {
     })
 
     const jsString = `sendMessage(new OSC.Bundle([${messageStrings.join(",")}]), "${onAddress}")`
-    Beat.log(`Executing in window: ${jsString}`)
+    // Beat.log(`Executing in window: ${jsString}`)
     this.window.runJS(jsString)
   }
 
@@ -106,7 +106,6 @@ export default class BeatWebSocketWindow {
   }
 
   close() {
-    Beat.log("Closing window and connection...")
     this.window.runJS(`osc.close()`)
     this.window.close()
   }

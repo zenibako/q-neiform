@@ -1,5 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core'
-import { QLabWorkspace } from '../../../data/sources/qlab-app'
+import { QLabWorkspace } from '../../../data/sources/qlab-workspace'
 import OSC from 'osc-js'
 // import Cues from '../../../data/repositories/cues'
 
@@ -31,7 +31,10 @@ export default class BridgeServe extends Command {
       })
     })
 
-    const qlab = new QLabWorkspace(osc, host, `${port}`, this)
+    const qlab = new QLabWorkspace(osc, host, `${port}`, {
+      log: (message) => this.log(message),
+      debug: (message) => this.log(message)
+    })
 
     try {
       const response = await qlab.initialize()

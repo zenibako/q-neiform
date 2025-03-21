@@ -109,9 +109,8 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     })
   }
 
-  listen() {
-    const wildcard = "*"
-    this.osc.on(wildcard, (message: OSC.Message) => {
+  listen(listenOn: string = "*") {
+    this.osc.on(listenOn, (message: OSC.Message) => {
       this.logger.log(`${this.getLogPrefaceText(message.address)}:\n${this.logOscMessage(message)}`)
     })
     this.logger.log(`Listening for messages...`)
@@ -135,7 +134,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     return "Unknown message received"
   }
 
-  send(...messages: IOscMessage[]): Promise<string | null> {
+  send(...messages: IOscMessage[]): Promise<string[]> {
     const oscMessages = messages.map(({ address, args }) => new OSC.Message(address, ...args))
     if (!oscMessages?.length) {
       throw new Error("No messages passed as send input.")
@@ -147,6 +146,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     }
 
     const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
+    const replyStrings: string[] = []
     return new Promise((resolve) => {
       let repliesRemaining = 0
       for (const { listenOn } of messages) {
@@ -155,19 +155,20 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
         }
 
         repliesRemaining++
-        this.osc.on(this.getReplyAddress(listenOn), () => {
+        this.osc.on(this.getReplyAddress(listenOn), (replyString: string) => {
+          replyStrings.push(replyString)
           repliesRemaining--
           if (repliesRemaining !== 0) {
             return
           }
 
-          resolve("All replies heard")
+          resolve(replyStrings)
         })
       }
 
       this.osc.send(payload, { receiver: "ws" })
       if (repliesRemaining === 0) {
-        resolve("No replies expected.")
+        resolve([])
       }
     })
   }

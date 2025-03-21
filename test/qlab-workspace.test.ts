@@ -1,7 +1,7 @@
 import { mock } from 'jest-mock-extended'
 import { IOscMessage } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
-import { OSC_DICTIONARY, QLabWorkspace } from '../src/data/sources/qlab-app'
+import { OSC_DICTIONARY, QLabWorkspace } from '../src/data/sources/qlab-workspace'
 import ILogger from '../src/domain/abstractions/i-logger'
 
 const replyConnectAddress = OSC_DICTIONARY.reply.address + OSC_DICTIONARY.connect.address

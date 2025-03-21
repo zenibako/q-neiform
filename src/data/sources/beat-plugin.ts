@@ -4,7 +4,7 @@ import ILogger from "../../domain/abstractions/i-logger"
 import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domain/abstractions/i-osc"
 import OSC from "osc-js"
 import BeatWebSocketWindow from "../transfer-objects/beat-window"
-import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-app"
+import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-workspace"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -17,7 +17,7 @@ type ServerConfiguration = {
   password?: string | null
 }
 
-export default class BeatApp implements IScriptApp, IOscClient, ILogger {
+export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
   private window?: BeatWebSocketWindow
   private oscServer?: IOscServer
 
@@ -33,6 +33,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.log(message)
   }
 
+  debug(message: string) {
+    if (this.mode !== Mode.DEVELOPMENT) {
+      return
+    }
+
+    Beat.log(message)
+  }
+
   async initialize(): Promise<string> {
     await this.openWebSocket()
     await this.connectToBridge()
@@ -41,7 +49,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
   startListeningForSelection(callback?: () => void): void {
     Beat.onSelectionChange((location, length) => {
-      this.log(JSON.stringify({
+      this.debug(JSON.stringify({
         character: Beat.currentLine.characterName(),
         id: Beat.currentLine.getCustomData("cue_id"),
         location,
@@ -53,13 +61,12 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     })
   }
 
-  async send(...messages: IOscMessage[]): Promise<string> {
+  async send(...messages: IOscMessage[]): Promise<string[]> {
     if (!this.oscServer) {
       throw new Error("No OSC server found.")
     }
 
-    const response = await this.sendMessages(messages)
-    return response
+    return this.sendMessages(messages)
   }
 
   private async openWebSocket(): Promise<string> {
@@ -75,7 +82,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
       try {
         this.window = new BeatWebSocketWindow(host, port, (osc) => {
           this.oscServer = new QLabWorkspace(osc as OSC, host, port, this)
-          this.saveServerConfiguration({ host, port})
+          this.saveServerConfiguration({ host, port })
           resolve("Successfully opened connection.")
         })
       } catch (e) {
@@ -94,13 +101,14 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     }
 
     try {
-      const connectResponse = JSON.parse(
-        await this.sendMessages([{
-          address: connect.address,
-          args: [password!],
-          listenOn: replyAddress + connect.address,
-        }])
-      )
+      const [connectResponse] = await this.sendMessages([{
+        address: connect.address,
+        args: [password!],
+        listenOn: replyAddress + connect.address,
+      }])
+      if (!connectResponse) {
+        throw new Error("No connect response")
+      }
       this.oscServer?.setIdFromConnectResponse(connectResponse)
       this.saveServerConfiguration({ password })
       this.window?.updateStatusDisplay("Connected!")
@@ -114,7 +122,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
 
   private closeWebSocket() {
     this.window?.close()
-    this.log("Closed open web socket.")
+    this.debug("Closed open web socket.")
   }
 
   private promptUserForServerInfo() {
@@ -174,7 +182,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     Beat.setDocumentSetting("server", serverConfig)
   }
 
-  private async sendMessages(messages: IOscMessage[]): Promise<string> {
+  private async sendMessages(messages: IOscMessage[]): Promise<string[]> {
     if (!this.oscServer) {
       throw new Error("No OSC server found.")
     }
@@ -189,9 +197,11 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           throw new Error(`No args returned.`)
         }
 
-        const [responseBody] = args
-        const responseBodyString = JSON.stringify(responseBody)
-        const { status } = JSON.parse(responseBodyString)
+        const [responseBody] = args as string[]
+        if (!responseBody) {
+          throw new Error("No response.")
+        }
+        const { status } = JSON.parse(responseBody)
 
         if (status === "denied") {
           Beat.alert("Access Issue", "Some or all of the messages were denied. Check logs for details.")
@@ -204,16 +214,15 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
           reject("Send errors")
         }
 
-        replyStrings.push(responseBodyString)
+        replyStrings.push(responseBody)
         repliesRemaining--
         if (repliesRemaining === 0) {
-          const replyJoinedString = replyStrings.join(",")
-          return resolve(replyJoinedString)
+          return resolve(replyStrings)
         }
       })
 
       if (repliesRemaining === 0) {
-        resolve("")
+        resolve([])
         return
       }
 
@@ -222,7 +231,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
   }
 
   setLineData(range: IRange, key: string, value: string | null) {
-    Beat.log(`Set custom data: ${key} = ${value}`)
+    this.debug(`Set custom data: ${key} = ${value}`)
     const line = Beat.currentParser.lineAtIndex(range.location)
     line.setCustomData(key, value ?? "")
   }
@@ -251,7 +260,7 @@ export default class BeatApp implements IScriptApp, IOscClient, ILogger {
     const beatMenu = Beat.menu(menu.title, menuItems)
     beatMenu.addItem(Beat.separatorMenuItem())
     beatMenu.addItem(Beat.menuItem("Watch Selection", ["ctrl", "w"], () => this.startListeningForSelection()))
-    Beat.log("Mounted menu items.")
+    this.debug("Mounted menu items.")
   }
 
   getCurrentLine() {

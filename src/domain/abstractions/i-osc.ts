@@ -1,6 +1,6 @@
 export interface IOscClient {
   initialize(): Promise<string>
-  send(...messages: IOscMessage[]): Promise<string | null>
+  send(...messages: IOscMessage[]): Promise<string[]>
   getDictionary(): IOscDictionary
   getTargetAddress(address?: string): string
 }

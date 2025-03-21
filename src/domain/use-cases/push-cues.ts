@@ -7,7 +7,7 @@ export default class PushCuesFromScript implements IUseCase {
   constructor(private scripts: Scripts, private cues: Cues, private logger: ILogger) { }
 
   async execute() {
-    this.logger.log("Pushing cues...")
+    this.logger.debug("Pushing cues...")
     try {
       const lines = this.scripts.getContextFromSelection()
       this.cues.addFromLines(lines)
@@ -18,7 +18,7 @@ export default class PushCuesFromScript implements IUseCase {
       }
       this.scripts.updateLines(linesToUpdate)
     } catch (e) {
-      this.logger.log(`Error while pushing: ${(e as Error).message ?? e}`)
+      this.logger.debug(`Error while pushing: ${(e as Error).message ?? e}`)
     }
     return this
   }

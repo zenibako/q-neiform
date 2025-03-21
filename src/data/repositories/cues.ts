@@ -88,16 +88,15 @@ export default class Cues implements ICues {
 
   async push(): Promise<void> {
     for (const cue of this.cueArray) {
-      await this.sendCue(cue)
-      this.logger.log("end of iteration")
+      const messages = cue.getActions(this.oscClient)
+      const [replyString] = await this.oscClient.send(...messages)
+      if (!replyString) {
+        continue
+      }
+      const { data } = JSON.parse(replyString)
+      cue.id = data
+      this.logger.debug(`Set ID on cue: ${cue.id}`)
     }
-    this.logger.log("push done")
+    this.logger.debug("Push done!")
   }
-
-  private async sendCue(cue: ICue): Promise<void> {
-    const messages = cue.getActions(this.oscClient)
-    cue.id = await this.oscClient.send(...messages)
-    this.logger.log("sendCue done")
-  }
-
 }

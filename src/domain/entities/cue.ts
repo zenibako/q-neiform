@@ -1,5 +1,5 @@
 import { Line } from "../../data/repositories/scripts"
-import { CueType } from "../../data/sources/qlab-app"
+import { CueType } from "../../data/sources/qlab-workspace"
 import { ICue } from "../abstractions/i-cues"
 import { IOscClient, IOscMessage } from "../abstractions/i-osc"
 
