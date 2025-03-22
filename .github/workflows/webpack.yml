@@ -25,4 +25,4 @@ jobs:
     - name: Build Beat plugin
       run: |
         npm install
-        npm run build:beat:webpack
+        npm run build:beat:dev
