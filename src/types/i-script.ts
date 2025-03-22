@@ -1,4 +1,4 @@
-import { Menu } from "../entities/menu";
+import { Menu } from "../domain/entities/menu"
 
 export interface IRange {
   location: number; 

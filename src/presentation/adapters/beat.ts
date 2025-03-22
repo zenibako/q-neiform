@@ -1,6 +1,6 @@
 import Cues from "../../data/repositories/cues";
 import { Scripts } from "../../data/repositories/scripts";
-import BeatPlugin, { Mode } from "../../data/sources/beat/beat-pluginlugin"
+import BeatPlugin, { Mode } from "../../data/sources/beat/plugin"
 import { Menu, MenuItem } from "../../domain/entities/menu";
 import ClearCueMappings from "../../domain/use-cases/clear-mappings";
 import DefineCueFromSelection from "../../domain/use-cases/define-cues";

@@ -1,4 +1,4 @@
-import { Line } from "../../data/repositories/scripts"
+import { Line } from "../data/repositories/scripts"
 import { IOscClient, IOscMessage } from "./i-osc"
 
 export interface ICueApp {
