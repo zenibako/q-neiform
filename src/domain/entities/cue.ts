@@ -1,7 +1,7 @@
 import { Line } from "../../data/repositories/scripts"
-import { CueType } from "../../data/sources/qlab-workspace"
-import { ICue } from "../abstractions/i-cues"
-import { IOscClient, IOscMessage } from "../abstractions/i-osc"
+import { CueType } from "../../data/sources/qlab/workspace"
+import { ICue } from "../../types/i-cues"
+import { IOscClient, IOscMessage } from "../../types/i-osc"
 
 export class CueAction implements IOscMessage {
   constructor(

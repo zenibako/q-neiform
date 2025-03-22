@@ -1,6 +1,6 @@
 import OSC from "osc-js"
-import { IOscMessage } from "../../domain/abstractions/i-osc"
-import { BeatWindow } from "../../types/beat-types"
+import { IOscMessage } from "../../../types/i-osc"
+import { BeatWindow } from "../../../types/beat/beat-types"
 
 const WIDTH = 300
 const HEIGHT = 50

@@ -1,1 +1,2 @@
-declare const Beat: import("../../domain/abstractions/i-beat-api")
+type BeatApi = import("./src/types/beat/api")
+declare const Beat: BeatApi

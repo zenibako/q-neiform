@@ -1,10 +1,10 @@
 import { mock } from 'jest-mock-extended'
-import { IOscClient } from '../src/domain/abstractions/i-osc'
-import PushCuesFromScript from '../src/domain/use-cases/push-cues'
-import { Scripts } from '../src/data/repositories/scripts'
-import { IScriptApp } from '../src/domain/abstractions/i-script'
-import ILogger from '../src/domain/abstractions/i-logger'
-import Cues from '../src/data/repositories/cues'
+import { IOscClient } from '../../src/types/i-osc'
+import PushCuesFromScript from '../../src/domain/use-cases/push-cues'
+import { Scripts } from '../../src/data/repositories/scripts'
+import { IScriptApp } from '../../src/types/i-script'
+import ILogger from '../../src/types/i-logger'
+import Cues from '../../src/data/repositories/cues'
 
 const scriptApp = mock<IScriptApp>()
 const oscClient = mock<IOscClient>()

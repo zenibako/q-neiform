@@ -1,4 +1,4 @@
-import { IUseCase } from "../abstractions/i-use-cases"
+import { IUseCase } from "../../types/i-use-cases"
 
 export interface IMenuItem {
   title: string | null

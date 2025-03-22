@@ -1,5 +1,5 @@
-import { IOscClient } from "../../domain/abstractions/i-osc"
-import { IScriptApp } from "../../domain/abstractions/i-script"
+import { IOscClient } from "../../types/i-osc"
+import { IScriptApp } from "../../types/i-script"
 import { Menu } from "../../domain/entities/menu"
 
 export default class Menus {

@@ -1,4 +1,4 @@
-import { BeatLine, BeatRange, BeatScene, BeatParser, BeatRawDocumentSettings, BeatMenu, BeatMenuItem, BeatModalInput, BeatTimer, BeatWindow, BeatCustomFunctions } from "../../types/beat-types"
+import { BeatLine, BeatRange, BeatScene, BeatParser, BeatRawDocumentSettings, BeatMenu, BeatMenuItem, BeatModalInput, BeatTimer, BeatWindow, BeatCustomFunctions } from "./beat-types"
 
 type DocumentSettingPrimitive = string | number | boolean | null
 type DocumentSetting = DocumentSettingPrimitive | Record<string, DocumentSettingPrimitive>
@@ -58,7 +58,6 @@ export default interface IBeatApi {
 
   getDocumentSetting(settingName: string): DocumentSetting
   setDocumentSetting(settingName: string, settingValue: DocumentSetting): void
-
 
   getRawDocumentSetting<T extends keyof BeatRawDocumentSettings>(settingName: T): RawDocumentSettingValue<T>
   setRawDocumentSetting<T extends keyof BeatRawDocumentSettings>(settingName: T, settingValue: RawDocumentSettingValue<T>): void

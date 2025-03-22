@@ -1,5 +1,5 @@
 import { Args, Command, Flags } from '@oclif/core'
-import { QLabWorkspace } from '../../../data/sources/qlab-workspace'
+import { QLabWorkspace } from '../../../data/sources/qlab/workspace'
 import OSC from 'osc-js'
 // import Cues from '../../../data/repositories/cues'
 
