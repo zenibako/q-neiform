@@ -187,8 +187,10 @@ declare namespace Beat {
     "TagDefinitions": TagDefinition[]
   }
 
-  function getRawDocumentSetting(settingName: keyof RawDocumentSettings): DocumentSetting
-  function setRawDocumentSetting(settingName: keyof RawDocumentSettings, settingValue: DocumentSetting): void
+  type RawDocumentSettingValue<T> = RawDocumentSettings[T]
+
+  function getRawDocumentSetting<T extends keyof RawDocumentSettings>(settingName: T): RawDocumentSettingValue<T>
+  function setRawDocumentSetting<T extends keyof RawDocumentSettings>(settingName: T, settingValue: RawDocumentSettingValue<T>): void
   function openFile(extensions: string[], callback: (filename?: string) => void): string
   function saveFile(extension: string, callback: (filename?: string) => void): void
   function assetAsString(path: string): string
