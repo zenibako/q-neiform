@@ -1,7 +1,7 @@
-import { ICueApp } from "../../domain/abstractions/i-cues"
-import ILogger from "../../domain/abstractions/i-logger";
+import { ICueApp } from "../../../types/i-cues"
+import ILogger from "../../../types/i-logger";
 import OSC from "osc-js";
-import { IOscServer, IOscDictionary, IOscMessage, IOscClient } from "../../domain/abstractions/i-osc";
+import { IOscServer, IOscDictionary, IOscMessage, IOscClient } from "../../../types/i-osc";
 
 export type CueType =
   "audio" |

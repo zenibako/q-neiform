@@ -1,6 +1,6 @@
 import Cues from "../../data/repositories/cues";
 import { Scripts } from "../../data/repositories/scripts";
-import { IUseCase } from "../abstractions/i-use-cases";
+import { IUseCase } from "../../types/i-use-cases";
 
 export default class PullCuesIntoScript implements IUseCase {
   constructor(private cues: Cues, private script: Scripts) {}

@@ -1,5 +1,5 @@
-import ILogger from "../../domain/abstractions/i-logger";
-import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script";
+import ILogger from "../../types/i-logger";
+import { IRange, IScriptApp, IScriptAppLine } from "../../types/i-script";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {

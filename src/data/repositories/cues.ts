@@ -1,6 +1,6 @@
-import { ICue, ICues } from "../../domain/abstractions/i-cues";
-import ILogger from "../../domain/abstractions/i-logger";
-import { IOscClient } from "../../domain/abstractions/i-osc";
+import { ICue, ICues } from "../../types/i-cues";
+import ILogger from "../../types/i-logger";
+import { IOscClient } from "../../types/i-osc";
 import { TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 

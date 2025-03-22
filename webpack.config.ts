@@ -3,7 +3,7 @@ import webpack from "webpack"
 
 const config: webpack.Configuration = {
   mode: "development",
-  entry: "./src/presentation/ui/beat.ts",
+  entry: "./src/presentation/adapters/beat.ts",
   /*
   externals: {
     ws: "commonjs ws",

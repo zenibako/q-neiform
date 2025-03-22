@@ -1,10 +1,10 @@
 import { mock } from 'jest-mock-extended'
-import BeatPlugin, { Mode } from '../src/data/sources/beat-plugin'
-import { IOscMessage, IOscServer } from '../src/domain/abstractions/i-osc'
+import BeatPlugin, { Mode } from '../../src/data/sources/beat/plugin'
+import { IOscMessage, IOscServer } from '../../src/types/i-osc'
 import OSC from 'osc-js'
-import { OSC_DICTIONARY } from '../src/data/sources/qlab-workspace'
-import { BeatCustomFunctions, BeatWindow } from '../src/types/beat-types'
-import IBeatApi from '../src/domain/abstractions/i-beat-api'
+import { OSC_DICTIONARY } from '../../src/data/sources/qlab/workspace'
+import { BeatCustomFunctions, BeatWindow } from '../../src/types/beat/beat-types'
+import IBeatApi from '../../src/types/beat/api'
 
 const mode = Mode.DEVELOPMENT
 

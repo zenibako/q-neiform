@@ -1,11 +1,12 @@
-import { IMenuItem, Menu } from "../../domain/entities/menu"
-import { IRange, IScriptApp, IScriptAppLine } from "../../domain/abstractions/i-script"
-import ILogger from "../../domain/abstractions/i-logger"
-import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domain/abstractions/i-osc"
+import { IMenuItem, Menu } from "../../../domain/entities/menu"
+import { IRange, IScriptApp, IScriptAppLine } from "../../../types/i-script"
+import ILogger from "../../../types/i-logger"
+import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../../types/i-osc"
 import OSC from "osc-js"
-import BeatWebSocketWindow from "../transfer-objects/beat-window"
-import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-workspace"
-import { BeatLine, BeatRange } from "../../types/beat-types"
+import BeatWebSocketWindow from "../beat/window"
+import { OSC_DICTIONARY, QLabWorkspace } from "../qlab/workspace"
+import { BeatLine, BeatRange, BeatTagType } from "../../../types/beat/beat-types"
+import BeatTags, { BeatTagQuery } from "./tags"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -259,6 +260,11 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
     if (foregroundColor) {
       Beat.textHighlight(foregroundColor, range.location, range.length)
     }
+  }
+
+  getTaggedRanges(type?: BeatTagType, range?: IRange): IRange[] {
+    return BeatTags.get({ type, range } as BeatTagQuery)
+      .map(({ range: [ location, length ]}) => ({ location, length }))
   }
 
   pullOutline() {

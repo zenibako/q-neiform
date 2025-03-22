@@ -1,7 +1,7 @@
 import Cues from "../../data/repositories/cues";
 import { Scripts } from "../../data/repositories/scripts";
-import ILogger from "../abstractions/i-logger";
-import { IUseCase } from "../abstractions/i-use-cases";
+import ILogger from "../../types/i-logger";
+import { IUseCase } from "../../types/i-use-cases";
 
 export default class PushCuesFromScript implements IUseCase {
   constructor(private scripts: Scripts, private cues: Cues, private logger: ILogger) { }

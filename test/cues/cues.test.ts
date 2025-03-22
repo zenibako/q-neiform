@@ -1,9 +1,9 @@
 import { mock } from 'jest-mock-extended'
-import { IOscClient } from '../src/domain/abstractions/i-osc'
-import Cues from '../src/data/repositories/cues'
-import { Line } from '../src/data/repositories/scripts'
-import { OSC_DICTIONARY } from '../src/data/sources/qlab-workspace'
-import ILogger from '../src/domain/abstractions/i-logger'
+import { IOscClient } from '../../src/types/i-osc'
+import Cues from '../../src/data/repositories/cues'
+import { Line } from '../../src/data/repositories/scripts'
+import { OSC_DICTIONARY } from '../../src/data/sources/qlab/workspace'
+import ILogger from '../../src/types/i-logger'
 
 const mockOscClient = mock<IOscClient>()
 const mockLogger = mock<ILogger>()

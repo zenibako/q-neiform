@@ -59,7 +59,7 @@ export type BeatModalInput = {
 }
 
 
-type BeatTagType = string | "sfx" | "vfx"
+export type BeatTagType = "sfx" | "vfx"
 export interface BeatTag {
   range: [number, number]
   type: BeatTagType
