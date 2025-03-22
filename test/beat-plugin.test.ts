@@ -3,6 +3,8 @@ import BeatPlugin, { Mode } from '../src/data/sources/beat-plugin'
 import { IOscMessage, IOscServer } from '../src/domain/abstractions/i-osc'
 import OSC from 'osc-js'
 import { OSC_DICTIONARY } from '../src/data/sources/qlab-workspace'
+import { BeatCustomFunctions, BeatWindow } from '../src/types/beat-types'
+import IBeatApi from '../src/domain/abstractions/i-beat-api'
 
 const mode = Mode.DEVELOPMENT
 
@@ -16,19 +18,21 @@ const serverSettings = {
 }
 
 const { reply: replyDict, connect: connectDict } = OSC_DICTIONARY
-type BeatCustomFunctions = Beat.CustomFunctions & {
+const mockBeatApi = mock<IBeatApi>()
+const mockBeatHtmlWindow = mock<BeatWindow>()
+mockBeatApi.assetAsString.mockReturnValue(`<span id="status">Connecting to bridge at localhost:8080...</span>`)
+const mockCustom = mock<BeatCustomFunctions & {
   handleOpen: () => void,
   handleReply: (reply: OSC.Message) => void,
 }
-
-const mockBeatApi = mock<typeof Beat>()
-const mockBeatHtmlWindow = mock<Beat.Window>()
-mockBeatApi.assetAsString.mockReturnValue(`<span id="status">Connecting to bridge at localhost:8080...</span>`)
-const mockCustom = mock<BeatCustomFunctions>()
+>()
 mockBeatApi.custom = mockCustom
-globalThis.Beat = mockBeatApi
 
-const docSettingsSpy = jest.spyOn(Beat, "getDocumentSetting")
+type BeatContext = typeof globalThis & {
+  Beat: IBeatApi
+}
+
+(globalThis as BeatContext).Beat = mockBeatApi
 
 const connectMessage: IOscMessage = {
   address: replyDict.address + connectDict.address,
@@ -81,7 +85,7 @@ describe('Send messages with OSC client', () => {
       }
       console.log(message)
     })
-    docSettingsSpy.mockReturnValue(serverSettings)
+    mockBeatApi.getDocumentSetting.mockReturnValue(serverSettings)
     beat = new BeatPlugin(mode)
 
     mockBeatApi.htmlWindow.mockImplementation(() => {

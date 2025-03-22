@@ -1,16 +1,16 @@
 import OSC from "osc-js"
 import { IOscMessage } from "../../domain/abstractions/i-osc"
+import { BeatWindow } from "../../types/beat-types"
 
 const WIDTH = 300
 const HEIGHT = 50
 
 export default class BeatWebSocketWindow {
-  private window: Beat.Window
+  private window: BeatWindow
 
   constructor(host: string, port: string, callback: (osc: unknown) => void) {
     Beat.custom.handleOpen = callback
-    Beat.custom.handleError = (arg) => {
-      const [error, status] = arg as [string, number]
+    Beat.custom.handleError = ([error, status]: [string, number]) => {
       // Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
       const { title, message } = this.getAlertInfo(status)
       Beat.alert(title, message)

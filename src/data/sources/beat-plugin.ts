@@ -5,6 +5,7 @@ import { IOscClient, IOscDictionary, IOscMessage, IOscServer } from "../../domai
 import OSC from "osc-js"
 import BeatWebSocketWindow from "../transfer-objects/beat-window"
 import { OSC_DICTIONARY, QLabWorkspace } from "./qlab-workspace"
+import { BeatLine, BeatRange } from "../../types/beat-types"
 
 export enum Mode { DEVELOPMENT, PRODUCTION }
 
@@ -49,7 +50,7 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
 
   listenForSelection(callback?: ({ location, length }: IRange) => void): void {
     Beat.onSelectionChangeDisabled = false
-    Beat.onSelectionChange((location, length) => {
+    Beat.onSelectionChange((location: number, length: number) => {
       this.debug(JSON.stringify({
         character: Beat.currentLine.characterName(),
         id: Beat.currentLine.getCustomData("cue_id"),
@@ -97,8 +98,8 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
 
     return new Promise((resolve, reject) => {
       try {
-        this.window = new BeatWebSocketWindow(host, port, (osc) => {
-          this.oscServer = new QLabWorkspace(osc as OSC, host, port, this)
+        this.window = new BeatWebSocketWindow(host!, port!, (osc) => {
+          this.oscServer = new QLabWorkspace(osc as OSC, host!, port!, this)
           this.saveServerConfiguration({ host, port })
           resolve("Successfully opened connection.")
         })
@@ -253,7 +254,7 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
     line.setCustomData(key, value ?? "")
   }
 
-  setRangeColor(range: Beat.Range, backgroundColor: string, foregroundColor?: string) {
+  setRangeColor(range: BeatRange, backgroundColor: string, foregroundColor?: string) {
     Beat.textBackgroundHighlight(backgroundColor, range.location, range.length)
     if (foregroundColor) {
       Beat.textHighlight(foregroundColor, range.location, range.length)
@@ -287,15 +288,15 @@ export default class BeatPlugin implements IScriptApp, IOscClient, ILogger {
   getSelectedLines() {
     const linesInRange = Beat.currentParser.linesInRange(Beat.selectedRange())
     return linesInRange
-      .filter(line => (line.forSerialization()["string"] as string)?.length)
-      .map(line => this.getScriptAppLine(line))
+      .filter((line: BeatLine) => (line.forSerialization()["string"] as string)?.length)
+      .map((line: BeatLine) => this.getScriptAppLine(line))
   }
 
   getLineFromIndex(index: number) {
     return this.getScriptAppLine(Beat.currentParser.lineAtIndex(index))
   }
 
-  private getScriptAppLine(beatLine: Beat.Line): IScriptAppLine {
+  private getScriptAppLine(beatLine: BeatLine): IScriptAppLine {
     const serializedBeatLine = beatLine.forSerialization()
     return {
       string: serializedBeatLine.string as string,

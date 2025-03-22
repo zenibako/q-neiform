@@ -9,7 +9,7 @@ export enum LineType {
 export class Line {
   public readonly text: string
   private readonly typeAsString: string
-  public readonly range: Beat.Range
+  public readonly range: IRange
   public cueId?: string
   constructor(scriptAppLine: IScriptAppLine) {
     this.text = scriptAppLine.string
