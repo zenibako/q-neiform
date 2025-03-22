@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: Beat plugin
 
 on:
   push:
@@ -22,7 +22,8 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Build Beat plugin
+    - name: Build and test Beat plugin
       run: |
-        npm install
+        npm ci
         npm run build:beat:ci
+        npm run test
