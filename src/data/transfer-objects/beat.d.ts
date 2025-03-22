@@ -142,10 +142,53 @@ declare namespace Beat {
   type CustomFunctions = Record<string, (arg1?: unknown | unknown[]) => void>
   let custom: CustomFunctions
   function call(customFunction: (arg: object) => void, arg: object)
-    
-  type DocumentSetting = string | number | boolean | Record<string, string | number | boolean | null> | null
+
+  type DocumentSettingPrimitive = string | number | boolean | null
+  type DocumentSetting = DocumentSettingPrimitive | Record<string, DocumentSettingPrimitive>
+
   function getDocumentSetting(settingName: string): DocumentSetting
   function setDocumentSetting(settingName: string, settingValue: DocumentSetting): void
+
+  type TagType = string | "sfx" | "vfx"
+  interface Tag {
+    range: [number, number]
+    type: TagType
+    definition: string
+  }
+
+  interface TagDefinition {
+    name: string
+    type: TagType
+    id: string
+  }
+
+  interface RawDocumentSettings {
+    "Print Notes": boolean
+    "Review Ranges": Range[]
+    "Print Synopsis": boolean
+    "Revision": {
+      "Removed": [],
+      "RemovalSuggestion": [],
+      "Addition": []
+    },
+    "Window Width": number
+    "Stylesheet": "Screenplay" | "Novel"
+    "Page Size": number
+    "Sidebar Visible": false
+    "Heading UUIDs": { string: string, uuid: string }[]
+    "Active Plugins": []
+    "Revision Level": 0
+    "Window Height": number
+    "pageNumberingMode": 1,
+    "Print Sections": boolean,
+    "Caret Position": number,
+    "CharacterData": Record<string, { name: string, gender: string }>
+    "Tags": Tag[]
+    "TagDefinitions": TagDefinition[]
+  }
+
+  function getRawDocumentSetting(settingName: keyof RawDocumentSettings): DocumentSetting
+  function setRawDocumentSetting(settingName: keyof RawDocumentSettings, settingValue: DocumentSetting): void
   function openFile(extensions: string[], callback: (filename?: string) => void): string
   function saveFile(extension: string, callback: (filename?: string) => void): void
   function assetAsString(path: string): string
@@ -163,7 +206,7 @@ declare namespace Beat {
 
   function async(backgroundFunction: () => void): void
   function sync(mainThreadFunction: () => void): void
-  
+
   type Timer = {
     invalidate(): void
     stop(): void
