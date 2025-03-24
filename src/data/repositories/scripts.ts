@@ -1,5 +1,5 @@
 import ILogger from "../../types/i-logger";
-import { IRange, IScriptApp, IScriptAppLine } from "../../types/i-script";
+import { IRange, IScriptEditor, IScriptLine, IScriptData } from "../../types/i-script";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
@@ -11,7 +11,7 @@ export class Line {
   private readonly typeAsString: string
   public readonly range: IRange
   public cueId?: string
-  constructor(scriptAppLine: IScriptAppLine) {
+  constructor(scriptAppLine: IScriptLine) {
     this.text = scriptAppLine.string
     this.typeAsString = scriptAppLine.typeAsString
     this.range = scriptAppLine.range
@@ -39,23 +39,23 @@ export class Line {
 }
 
 export class Scripts {
-  constructor(private scriptApp: IScriptApp, private logger: ILogger) { }
+  constructor(private data: IScriptData, private editor: IScriptEditor, private logger: ILogger) { }
 
   listenForSelection(callback: (range: IRange) => void) {
-    this.scriptApp.listenForSelection((range) => {
-      this.scriptApp.toggleHighlight("#1E90FF", range)
+    this.editor.listenForSelection((range) => {
+      this.editor.toggleHighlight("#1E90FF", range)
       callback(range)
     })
   }
 
   stopListeningForSelection() {
-    this.scriptApp.stopListeningForSelection()
+    this.editor.stopListeningForSelection()
   }
 
   getContextFromSelection(): Line[] {
-    const contextLinesFromApp = this.scriptApp.getSelectedLines()
+    const contextLinesFromApp = this.editor.getSelectedLines()
     if (!contextLinesFromApp?.length) {
-      contextLinesFromApp.push(this.scriptApp.getCurrentLine())
+      contextLinesFromApp.push(this.editor.getCurrentLine())
     }
 
     const contextLines = contextLinesFromApp.map(line => new Line(line))
@@ -100,10 +100,11 @@ export class Scripts {
   }
 
   getLineFromIndex(index: number): Line {
-    const line = this.scriptApp.getLineFromIndex(index)
+    const line = this.data.getLineFromIndex(index)
     return new Line(line)
   }
 
+  /*
   updateLines(lines: Line[]) {
     this.logger.log("Updating lines...")
     for (const line of lines) {
@@ -115,6 +116,7 @@ export class Scripts {
 
     return lines
   }
+  */
 
   getScript(): Script {
     // return new Script(this.scriptApp.pullOutline())

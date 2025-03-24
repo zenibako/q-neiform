@@ -5,21 +5,24 @@ export interface IRange {
   length: number
 }
 
-export interface IScriptAppLine {
+export interface IScriptLine {
   string: string,
   typeAsString: string,
   range: IRange,
   cueId?: string
 }
 
-export interface IScriptApp {
+export interface IScriptData {
+  getLineFromIndex(index: number): IScriptLine
+  setLineData(range: IRange, key: string, value: string | null): void
+}
+
+export interface IScriptEditor {
   listenForSelection(callback: (range: IRange) => void): void
   stopListeningForSelection(): void
   toggleHighlight(color: string, range: IRange): void
   mountMenu(menu: Menu): void
-  getCurrentLine(): IScriptAppLine
-  getSelectedLines(): IScriptAppLine[]
-  getLineFromIndex(index: number): IScriptAppLine
-  setLineData(range: IRange, key: string, value: string | null): void
+  getCurrentLine(): IScriptLine
+  getSelectedLines(): IScriptLine[]
   setRangeColor(range: IRange, backgroundColor: string, foregroundColor?: string): void
 }

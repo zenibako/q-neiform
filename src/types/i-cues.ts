@@ -8,17 +8,17 @@ export interface ICueApp {
 }
 
 export interface ICues extends Iterable<ICue> {
+  add(...lines: Line[]): ICue[]
 }
 
 export interface ICue {
-  id: string | null,
-  name: string,
-  // number: string,
-  type: string,
-  lines: Line[]
-  // color: string,
-  // mode: string,
-  // address: string
+  name: string
+  id: string
+  type: string
+  notes?: string
+  mode?: number
+  range?: [location: number, length: number]
+  cues?: ICue[]
 
   getActions(oscClient: IOscClient): IOscMessage[]
 }

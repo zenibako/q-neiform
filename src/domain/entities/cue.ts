@@ -1,3 +1,4 @@
+import { v4 as generateUuid } from "uuid"
 import { Line } from "../../data/repositories/scripts"
 import { CueType } from "../../data/sources/qlab/workspace"
 import { ICue } from "../../types/i-cues"
@@ -23,7 +24,7 @@ export class Cue implements ICue {
   constructor(
     public name: string,
     public type: CueType,
-    public id: string | null = null,
+    public id: string = generateUuid()
   ) {
   }
 
@@ -88,14 +89,14 @@ export class Cue implements ICue {
     */
 }
 export class SceneCue extends Cue {
-  constructor(name: string, id?: string | null) {
+  constructor(name: string, id?: string) {
     super(name, "group", id)
     this.mode = 1
   }
 }
 
 export class TriggerCue extends Cue {
-  constructor(name: string, id?: string | null) {
+  constructor(name: string, id?: string) {
     super(name, "group", id)
     this.mode = 3
   }

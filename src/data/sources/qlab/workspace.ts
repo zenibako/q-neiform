@@ -75,7 +75,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
   ) {
   }
 
-  initialize(): Promise<string> {
+  initialize(): Promise<IOscClient> {
     return new Promise((resolve, reject) => {
       this.osc.on("open", () => {
         this.logger.log(`Opened WebSocket bridge port on localhost:8080.`)
@@ -94,9 +94,9 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
             throw new Error(`No args returned.`)
           }
 
-          const [connectResponse] = message.args
-          this.setIdFromConnectResponse(connectResponse as string)
-          resolve("Successfully connected.")
+          const { address, args } = message
+          this.setIdFromConnectResponse({ address, args: args as string[] }) 
+          resolve(this)
         } catch (e) {
           reject((e as Error)?.message ?? e)
         }
@@ -134,7 +134,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     return "Unknown message received"
   }
 
-  send(...messages: IOscMessage[]): Promise<string[]> {
+  send(...messages: IOscMessage[]): Promise<IOscMessage[]> {
     const oscMessages = messages.map(({ address, args }) => new OSC.Message(address, ...args))
     if (!oscMessages?.length) {
       throw new Error("No messages passed as send input.")
@@ -146,7 +146,7 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     }
 
     const payload = oscMessages.length === 1 ? firstOscMessage : new OSC.Bundle(oscMessages)
-    const replyStrings: string[] = []
+    const replyMessages: IOscMessage[] = []
     return new Promise((resolve) => {
       let repliesRemaining = 0
       for (const { listenOn } of messages) {
@@ -156,13 +156,13 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
 
         repliesRemaining++
         this.osc.on(this.getReplyAddress(listenOn), (replyString: string) => {
-          replyStrings.push(replyString)
+          replyMessages.push(JSON.parse(replyString))
           repliesRemaining--
           if (repliesRemaining !== 0) {
             return
           }
 
-          resolve(replyStrings)
+          resolve(replyMessages)
         })
       }
 
@@ -177,8 +177,8 @@ export class QLabWorkspace implements ICueApp, IOscServer, IOscClient {
     return OSC_DICTIONARY
   }
 
-  setIdFromConnectResponse(replyResponse: string) {
-    const { workspace_id, data } = JSON.parse(replyResponse)
+  setIdFromConnectResponse({ args: [ replyResponse ] }: IOscMessage) {
+    const { workspace_id, data } = JSON.parse(replyResponse as string)
 
     const splitData = (data as string)?.split(":")
     if (splitData?.length < 2) {

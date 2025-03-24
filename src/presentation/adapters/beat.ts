@@ -1,25 +1,29 @@
-import Cues from "../../data/repositories/cues";
+import LocalCues from "../../data/repositories/local-cues";
+import RemoteCues from "../../data/repositories/remote-cues";
 import { Scripts } from "../../data/repositories/scripts";
 import BeatPlugin, { Mode } from "../../data/sources/beat/plugin"
+import BeatWebSocketWindow from "../../data/sources/beat/window";
 import { Menu, MenuItem } from "../../domain/entities/menu";
 import ClearCueMappings from "../../domain/use-cases/clear-mappings";
-import DefineCueFromSelection from "../../domain/use-cases/define-cues";
-import PushCuesFromScript from "../../domain/use-cases/push-cues";
+import ConvertTagsToCues from "../../domain/use-cases/define-cues";
+import PushCuesToRemote from "../../domain/use-cases/push-cues";
 
 const plugin = new BeatPlugin(Mode.DEVELOPMENT)
 
 async function initialize() {
   plugin.debug("Starting plugin...")
-  const scripts = new Scripts(plugin, plugin)
-  const cues = new Cues(plugin, plugin)
+  const { host, port, password } = plugin.serverConfiguration
+  const webSocketWindow = await new BeatWebSocketWindow(host, port).initialize(password)
+
+  const scripts = new Scripts(plugin, plugin, plugin)
+  const remoteCues = new RemoteCues(webSocketWindow, plugin)
+  const localCues = new LocalCues(plugin, plugin)
 
   const menu = new Menu("QLab", [
-    new MenuItem("Push to Cues", new PushCuesFromScript(scripts, cues, plugin)),
-    new MenuItem("Highlight Cues", new DefineCueFromSelection(scripts, cues, plugin)),
+    new MenuItem("Convert Tags to Cues", new ConvertTagsToCues(scripts, localCues, plugin)),
+    new MenuItem("Push Cues", new PushCuesToRemote(localCues, remoteCues, plugin)),
     new MenuItem("Clear Cue Mappings", new ClearCueMappings(scripts, plugin))
   ])
-
-  await plugin.initialize()
   plugin.mountMenu(menu)
 }
 

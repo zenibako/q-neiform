@@ -1,17 +1,17 @@
 import { ICue, ICues } from "../../types/i-cues";
 import ILogger from "../../types/i-logger";
-import { IOscClient } from "../../types/i-osc";
 import { TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
 
 export default class Cues implements ICues {
-  private cueArray: ICue[] = []
-
-  constructor(private oscClient: IOscClient, private logger: ILogger) { }
+  constructor(
+    public readonly logger: ILogger,
+    private readonly list: ICue[] = []
+  ) { }
 
   *[Symbol.iterator](): IterableIterator<ICue> {
-    for (let i = 0; i < this.cueArray.length; ++i) {
-      const cue = this.cueArray[i]
+    for (let i = 0; i < this.list.length; ++i) {
+      const cue = this.list[i]
       if (!cue) {
         continue
       }
@@ -19,13 +19,15 @@ export default class Cues implements ICues {
     }
   }
 
-  async getCueList(): Promise<object[]> {
-    //async getCueList(): Promise<Cue[]> {
-    // return this.cueApp.getCueList()
-    return []
+  merge(cues?: ICues) {
+    if (!cues) {
+      return this.list
+    }
+    this.list.push(...cues)
+    return this.list
   }
 
-  addFromLines(lines: Line[]): ICue[] {
+  add(...lines: Line[]): ICue[] {
     let bufferCue, bufferCharacterName
 
     const cuesToAdd: ICue[] = []
@@ -68,7 +70,7 @@ export default class Cues implements ICues {
         } else {
           pushCue = lineCue
         }
-        pushCue.lines.push(line)
+        //pushCue.lines.push(line)
         reset(pushCue)
       } else if (isDifferentCharacter) {
         reset(bufferCue)
@@ -83,21 +85,7 @@ export default class Cues implements ICues {
       bufferCue?.lines.push(line)
     }
 
-    this.cueArray.push(...cuesToAdd)
+    this.list.push(...cuesToAdd)
     return cuesToAdd
-  }
-
-  async push(): Promise<void> {
-    for (const cue of this.cueArray) {
-      const messages = cue.getActions(this.oscClient)
-      const [replyString] = await this.oscClient.send(...messages)
-      if (!replyString) {
-        continue
-      }
-      const { data } = JSON.parse(replyString)
-      cue.id = data
-      this.logger.debug(`Set ID on cue: ${cue.id}`)
-    }
-    this.logger.debug("Push done!")
   }
 }

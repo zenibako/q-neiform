@@ -13,7 +13,7 @@ export default class ClearCueMappings implements IUseCase {
         line.cueId = undefined
       }
       this.logger.log(`Clearing cue mappings on lines: ${JSON.stringify(lines, null, 1)}`)
-      this.scripts.updateLines(lines)
+      //this.scripts.updateLines(lines)
     } catch (e) {
       this.logger.log(`Error while pushing: ${(e as Error).message ?? e}`)
     }

@@ -1,21 +1,21 @@
 import { mock } from 'jest-mock-extended'
 import { IOscClient } from '../../src/types/i-osc'
 import PushCuesFromScript from '../../src/domain/use-cases/push-cues'
-import { Scripts } from '../../src/data/repositories/scripts'
-import { IScriptApp } from '../../src/types/i-script'
 import ILogger from '../../src/types/i-logger'
-import Cues from '../../src/data/repositories/cues'
+import RemoteCues from '../../src/data/repositories/remote-cues'
+import LocalCues from '../../src/data/repositories/local-cues'
+import CurrentWorkingDirectory from '../../src/data/sources/fs/cwd'
 
-const scriptApp = mock<IScriptApp>()
+const cwd = mock<CurrentWorkingDirectory>()
 const oscClient = mock<IOscClient>()
 const logger = mock<ILogger>()
 
 describe('Push cues with OSC client', () => {
-    test('one cue', () => {
-      const scripts = new Scripts(scriptApp, logger)
-      const cues = new Cues(oscClient, logger)
-      const useCase = new PushCuesFromScript(scripts, cues, logger)
+  test('one cue', () => {
+    const localCues = new LocalCues(cwd, logger)
+    const remoteCues = new RemoteCues(oscClient, logger)
+    const useCase = new PushCuesFromScript(localCues, remoteCues, logger)
 
-      useCase.execute()
-    })
+    useCase.execute()
+  })
 })

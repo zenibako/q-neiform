@@ -1,6 +1,6 @@
 export interface IOscClient {
-  initialize(): Promise<string>
-  send(...messages: IOscMessage[]): Promise<string[]>
+  initialize(): Promise<IOscClient>
+  send(...messages: IOscMessage[]): Promise<IOscMessage[]>
   getDictionary(): IOscDictionary
   getTargetAddress(address?: string): string
 }
@@ -27,7 +27,7 @@ export interface IOscServer {
   host: string
   port: string
   getDictionary(): IOscDictionary
-  setIdFromConnectResponse(replyResponse: string): void
+  setIdFromConnectResponse(message: IOscMessage): void
   getTargetAddress(address?: string): string
   getReplyAddress(address?: string): string
 }

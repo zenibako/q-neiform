@@ -11,7 +11,7 @@ export default class DefineCueFromSelection implements IUseCase {
     if (!this.isListening) {
       this.scripts.listenForSelection(() => {
         const lines = this.scripts.getContextFromSelection()
-        const addedCues = this.cues.addFromLines(lines)
+        const addedCues = this.cues.add(...lines)
         this.logger.log(JSON.stringify(addedCues, null, 1))
       })
     } else {
