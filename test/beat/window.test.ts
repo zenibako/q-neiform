@@ -6,8 +6,10 @@ import { BeatCustomFunctions, BeatWindow } from '../../src/types/beat/beat-types
 import IBeatApi from '../../src/types/beat/api'
 import BeatWebSocketWindow from '../../src/data/sources/beat/window'
 
+// Configure server mocks
 const oscServer = mock<IOscServer>()
 oscServer.getDictionary.mockReturnValue(OSC_DICTIONARY)
+oscServer.getTargetAddress.mockImplementation((address) => address || "/target")
 
 const serverConfig = {
   host: "localhost",
@@ -15,139 +17,218 @@ const serverConfig = {
   password: "12345"
 }
 
-const { reply: replyDict, connect: connectDict } = OSC_DICTIONARY
+// const { reply: replyDict, connect: connectDict } = OSC_DICTIONARY
 const mockBeatApi = mock<IBeatApi>()
 const mockBeatHtmlWindow = mock<BeatWindow>()
-const mockCustom = mock<BeatCustomFunctions & {
-  handleOpen: () => void,
-  handleReply: (reply: OSC.Message) => void,
-}
->()
-mockBeatApi.custom = mockCustom
 
+// Set up Beat global API
 type BeatContext = typeof globalThis & {
   Beat: IBeatApi
 }
 
 (globalThis as BeatContext).Beat = mockBeatApi
 
-const connectMessage: IOscMessage = {
-  address: replyDict.address + connectDict.address,
-  args: [JSON.stringify({
-    workspace_id: "12345",
-    data: "ok:view|edit|control"
-  })]
-}
+describe('BeatWebSocketWindow', () => {
+  let webSocketWindow: BeatWebSocketWindow
 
-const test1Dict = {
-  address: "/test1",
-  hasReply: true
-}
+  beforeEach(() => {
+    jest.clearAllMocks()
 
-const test2Dict = {
-  address: "/test2",
-  hasReply: false
-}
+    // Setup basic mocks that all tests need
+    mockBeatApi.log.mockImplementation(() => { })
+    mockBeatApi.htmlWindow.mockReturnValue(mockBeatHtmlWindow)
+    mockBeatHtmlWindow.gangWithDocumentWindow.mockImplementation(() => { })
 
-let messagesToSend: IOscMessage[] = []
-
-let webSocketWindow: BeatWebSocketWindow
-
-describe('Send messages with OSC client', () => {
-  const mockReplyAddress = replyDict.address + test1Dict.address
-
-  const messageWithReply: IOscMessage = {
-    address: test1Dict.address,
-    args: ["string"],
-    listenOn: mockReplyAddress + "/*",
-  }
-  const messageWithNoReply: IOscMessage = {
-    address: test2Dict.address,
-    args: [123],
-  }
-
-  const replyMessage: IOscMessage = {
-    address: mockReplyAddress,
-    args: [JSON.stringify({
-      status: "ok",
-      address: test1Dict.address,
-      data: "12345"
-    })]
-  }
-
-  beforeEach(async () => {
+    // Create instance
     webSocketWindow = new BeatWebSocketWindow(serverConfig.host, serverConfig.port)
-    mockBeatApi.log.mockImplementation((message) => {
-      console.log(message)
+
+    // Manually set the server and window
+    Object.defineProperty(webSocketWindow, '_server', {
+      value: oscServer,
+      writable: true
     })
 
-    mockBeatApi.htmlWindow.mockImplementation(() => {
-      mockBeatApi.custom.handleOpen!(new OSC())
-      return mockBeatHtmlWindow
+    Object.defineProperty(webSocketWindow, '_window', {
+      value: mockBeatHtmlWindow,
+      writable: true
     })
-
-    mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
-      mockBeatApi.custom.handleReply!(JSON.stringify(connectMessage))
-    })
-
-    webSocketWindow = await webSocketWindow.initialize(serverConfig.password)
-
-    messagesToSend = [messageWithReply, messageWithNoReply]
   })
 
-  afterEach(() => {
-    jest.resetAllMocks()
-  })
-
-  describe('and wait for reply', () => {
-    test('one message', async () => {
-      mockBeatHtmlWindow.runJS
-        //.mockImplementationOnce(() => { }) // Status display update
-        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(
-          JSON.stringify(replyMessage)
-        ))
-
-      await webSocketWindow.send(messageWithReply)
-      // expect(reply).toBeTruthy()
-    })
-
-
-    test('two messages', async () => {
-      mockBeatHtmlWindow.runJS
-        //.mockImplementationOnce(() => { }) // Status display update
-        .mockImplementationOnce(() => mockBeatApi.custom.handleReply!(
-          JSON.stringify(replyMessage)
-        ))
-
-      console.log("-- START TWO MESSAGES TEST")
-      await webSocketWindow.send(messageWithReply, messageWithNoReply)
-      console.log("-- STOP TWO MESSAGES TEST")
-      // expect(replies).toBeTruthy()
-    })
-
-    test('error', async () => {
-      const error = "Error occurred."
-      mockBeatHtmlWindow.runJS
-        .mockImplementationOnce(() => mockBeatApi.custom.handleError!(
-          [error, OSC.STATUS.IS_OPEN]
-        ))
-
-      try {
-        await webSocketWindow.send(...messagesToSend)
-        fail()
-      } catch (e) {
-        expect((e as Error).message).toMatch(error)
+  describe('send method', () => {
+    it('should send a message and return a response with reply', async () => {
+      // Setup test data
+      const messageWithReply: IOscMessage = {
+        address: "/test",
+        args: ["foo"],
+        listenOn: "/reply/test/*",
       }
+
+      const replyMessage: IOscMessage = {
+        address: "/reply/test",
+        args: [JSON.stringify({
+          status: "ok",
+          data: "success"
+        })]
+      }
+
+      // Set up the custom handler before the test
+      mockBeatApi.custom = {
+        handleReply: jest.fn()
+      } as BeatCustomFunctions
+
+      // Mock window.runJS to simulate JavaScript execution in the Beat HTML window
+      mockBeatHtmlWindow.runJS.mockImplementationOnce((jsCode) => {
+        // Verify JS contains correct content
+        expect(jsCode).toContain("sendMessage")
+        expect(jsCode).toContain(messageWithReply.address)
+
+        // Simulate reply by calling the custom handler
+        setTimeout(() => {
+          (mockBeatApi.custom!.handleReply as jest.Mock)(JSON.stringify(replyMessage))
+        }, 10)
+      })
+
+      // Call the method
+      const result = await webSocketWindow.send(messageWithReply)
+
+      // Verify the result
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(replyMessage)
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalled()
+    })
+
+    it('should send multiple messages and handle the one with reply', async () => {
+      // Setup test data
+      const messageWithReply: IOscMessage = {
+        address: "/test1",
+        args: ["foo"],
+        listenOn: "/reply/test1/*",
+      }
+
+      const messageWithoutReply: IOscMessage = {
+        address: "/test2",
+        args: [123],
+      }
+
+      const replyMessage: IOscMessage = {
+        address: "/reply/test1",
+        args: [JSON.stringify({
+          status: "ok",
+          data: "success"
+        })]
+      }
+
+      // Set up the custom handler
+      mockBeatApi.custom = {
+        handleReply: jest.fn()
+      } as BeatCustomFunctions
+
+      // Mock window.runJS to simulate JavaScript execution
+      mockBeatHtmlWindow.runJS.mockImplementationOnce((jsCode) => {
+        // Verify JS contains correct content for both messages
+        expect(jsCode).toContain("sendMessage")
+        expect(jsCode).toContain("new OSC.Bundle")
+        expect(jsCode).toContain(messageWithReply.address)
+        expect(jsCode).toContain(messageWithoutReply.address)
+
+        // Simulate reply
+        setTimeout(() => {
+          (mockBeatApi.custom!.handleReply as jest.Mock)(JSON.stringify(replyMessage))
+        }, 10)
+      })
+
+      // Call the method
+      const result = await webSocketWindow.send(messageWithReply, messageWithoutReply)
+
+      // Verify the result
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(replyMessage)
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalled()
+    })
+
+    it('should handle errors properly', async () => {
+      // Setup test data
+      const message: IOscMessage = {
+        address: "/test",
+        args: ["foo"],
+        listenOn: "/reply/test/*",
+      }
+
+      const error = "Error occurred"
+      const status = OSC.STATUS.IS_OPEN
+
+      // Set up the custom error handler
+      mockBeatApi.custom = {
+        handleError: jest.fn()
+      } as BeatCustomFunctions
+
+      // Mock window.runJS to simulate error
+      mockBeatHtmlWindow.runJS.mockImplementationOnce(() => {
+        // Trigger error handler
+        setTimeout(() => {
+          (mockBeatApi.custom!.handleError as jest.Mock)([error, status])
+        }, 10)
+      })
+
+      // Expect rejection with error
+      await expect(webSocketWindow.send(message))
+        .rejects.toEqual(expect.objectContaining({
+          error,
+          status
+        }))
+
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalled()
+    })
+
+    it('should resolve immediately for messages without reply', async () => {
+      // Setup test data
+      const messageWithoutReply: IOscMessage = {
+        address: "/test",
+        args: [123],
+      }
+
+      // No custom handlers needed for this test
+      mockBeatApi.custom = {} as BeatCustomFunctions
+
+      // Mock window.runJS
+      mockBeatHtmlWindow.runJS.mockImplementationOnce((jsCode) => {
+        expect(jsCode).toContain("sendMessage")
+        expect(jsCode).toContain(messageWithoutReply.address)
+      })
+
+      // Call the method
+      const result = await webSocketWindow.send(messageWithoutReply)
+
+      // Verify empty result since no replies expected
+      expect(result).toEqual([])
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalled()
     })
   })
 
-  describe('and don\'t wait for a reply', () => {
-    test('one message', () => {
-      webSocketWindow.send(messageWithNoReply)
+  describe('utility methods', () => {
+    it('getDictionary() returns the OSC dictionary', () => {
+      const dictionary = webSocketWindow.getDictionary()
+      expect(dictionary).toBe(OSC_DICTIONARY)
     })
 
-    test('two messages', () => {
-      webSocketWindow.send(messageWithNoReply, messageWithNoReply)
+    it('getTargetAddress() forwards call to server', () => {
+      const testAddress = "/test/address"
+      webSocketWindow.getTargetAddress(testAddress)
+      expect(oscServer.getTargetAddress).toHaveBeenCalledWith(testAddress)
+    })
+
+    it('updateStatusDisplay() calls runJS with status text', () => {
+      const statusText = "Test Status"
+      webSocketWindow.updateStatusDisplay(statusText)
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalledWith(
+        expect.stringContaining(statusText)
+      )
+    })
+
+    it('close() closes OSC connection and window', () => {
+      webSocketWindow.close()
+      expect(mockBeatHtmlWindow.runJS).toHaveBeenCalledWith("osc.close()")
+      expect(mockBeatHtmlWindow.close).toHaveBeenCalled()
     })
   })
 })
