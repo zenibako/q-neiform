@@ -1,4 +1,5 @@
 import { Menu } from "../domain/entities/menu"
+import { ICue } from "./i-cues";
 
 export interface IRange {
   location: number; 
@@ -25,4 +26,9 @@ export interface IScriptEditor {
   getCurrentLine(): IScriptLine
   getSelectedLines(): IScriptLine[]
   setRangeColor(range: IRange, backgroundColor: string, foregroundColor?: string): void
+}
+
+export interface IScriptStorage {
+  getFountainText(): Promise<string | null>
+  getYamlCues(): Promise<string | null>
 }

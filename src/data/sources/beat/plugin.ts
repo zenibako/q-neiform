@@ -1,5 +1,5 @@
 import { IMenuItem, Menu } from "../../../domain/entities/menu"
-import { IRange, IScriptData, IScriptEditor, IScriptLine } from "../../../types/i-script"
+import { IRange, IScriptData, IScriptEditor, IScriptLine, IScriptStorage } from "../../../types/i-script"
 import ILogger from "../../../types/i-logger"
 import OSC from "osc-js"
 import { BeatLine, BeatRange, BeatTagType } from "../../../types/beat/beat-types"
@@ -10,7 +10,7 @@ export enum Mode { DEVELOPMENT, PRODUCTION }
 const WS_DEFAULT_ADDRESS = "localhost"
 const WS_DEFAULT_PORT = "8080"
 
-export default class BeatPlugin implements IScriptEditor, IScriptData, ILogger {
+export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptStorage, ILogger {
   get serverConfiguration(): { host: string, port: string, password: string } {
     const config = Beat.getDocumentSetting("server") ?? {}
     if (!config.host || !config.port) {
@@ -54,6 +54,14 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, ILogger {
     }
 
     Beat.log(message)
+  }
+
+  async getFountainText(): Promise<string | null> {
+      return null
+  }
+
+  async getYamlCues(): Promise<string | null> {
+      return null
   }
 
   listenForSelection(callback?: ({ location, length }: IRange) => void): void {

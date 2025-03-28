@@ -1,20 +1,20 @@
 import { parse } from "yaml";
 import { ICue } from "../../types/i-cues";
 import ILogger from "../../types/i-logger";
-import CurrentWorkingDirectory from "../sources/fs/cwd";
 import Cues from "./cues";
+import { IScriptStorage } from "../../types/i-script";
 
 export default class LocalCues extends Cues {
   private localCueList: ICue[] = []
   constructor(
-    private readonly directory: CurrentWorkingDirectory,
+    private readonly storage: IScriptStorage,
     public readonly logger: ILogger
   ) {
     super(logger)
   }
 
-  async load(name: string) {
-    const cueFile = await this.directory.readCueFile(name)
+  async load() {
+    const cueFile = await this.storage.getYamlCues()
     if (!cueFile) {
       throw new Error("No cue file found.")
     }
