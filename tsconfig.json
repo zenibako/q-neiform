@@ -6,7 +6,7 @@
     "**/*.ts",
     "**/*.tsx",
     "global.d.ts"
-  ],
+, "test/scripts/scripts.test.ts.bak"  ],
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     /* Visit https://aka.ms/tsconfig to read more about this file */

@@ -1,7 +1,6 @@
 import { IMenuItem, Menu } from "../../../domain/entities/menu"
 import { IRange, IScriptData, IScriptEditor, IScriptLine, IScriptStorage } from "../../../types/i-script"
 import ILogger from "../../../types/i-logger"
-import OSC from "osc-js"
 import { BeatLine, BeatRange, BeatTagType } from "../../../types/beat/beat-types"
 import BeatTags, { BeatTagQuery } from "./tags"
 
@@ -53,15 +52,19 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptSt
       return
     }
 
-    Beat.log(message)
+    Beat.log(`[DEBUG]: ${message}`)
   }
 
   async getFountainText(): Promise<string | null> {
-      return null
+    return null
   }
 
-  async getYamlCues(): Promise<string | null> {
-      return null
+  async setYamlCues(yaml: string): Promise<void> {
+    Beat.setDocumentSetting("cues", yaml)
+  }
+
+  async getYamlCues(): Promise<string> {
+    return Beat.getDocumentSetting("cues") ?? "cues: {}"
   }
 
   listenForSelection(callback?: ({ location, length }: IRange) => void): void {
@@ -94,7 +97,6 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptSt
       this.colorMap.set(range, color)
     }
   }
-
 
   private promptUserForServerInfo() {
     const modalResponse = Beat.modal({
@@ -140,8 +142,17 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptSt
     }
   }
 
-  getTaggedRanges(type?: BeatTagType, range?: IRange): IRange[] {
-    return BeatTags.get({ type, range } as BeatTagQuery)
+  getLines() {
+    return Beat.lines()
+  }
+
+  getTaggedRanges(...types: BeatTagType[]): IRange[] {
+    if (!types.length) {
+      return []
+    }
+
+    const query = new BeatTagQuery(types)
+    return BeatTags.get(query)
       .map(({ range: [location, length] }) => ({ location, length }))
   }
 
@@ -187,27 +198,6 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptSt
       typeAsString: serializedBeatLine.typeAsString as string,
       range: serializedBeatLine.range as IRange,
       cueId: beatLine.getCustomData("cue_id")
-    }
-  }
-
-  private getAlertInfo(status: number, error?: string) {
-    const tryAgainMessage = "Try again. Is \"q-neiform bridge serve\" running?"
-    switch (status) {
-      case OSC.STATUS.IS_NOT_INITIALIZED:
-        return {
-          title: "Initialization Error",
-          message: tryAgainMessage
-        }
-      case OSC.STATUS.IS_CONNECTING:
-        return {
-          title: "Connection Error",
-          message: tryAgainMessage
-        }
-      default:
-        return {
-          title: error ? "Server Error" : "Unknown Error",
-          message: error ?? "Closing plugin. Reopen and try again."
-        }
     }
   }
 }

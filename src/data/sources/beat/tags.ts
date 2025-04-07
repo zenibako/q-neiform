@@ -3,33 +3,40 @@ import { BeatRange, BeatTag, BeatTagType } from "../../../types/beat/beat-types"
 const DOC_TAGS_KEY = "Tags"
 
 export class BeatTagQuery {
-  public type?: BeatTagType
-  public range?: BeatRange
+
+  constructor(
+    public readonly types: BeatTagType[] = [],
+    public readonly ranges: BeatRange[] = []
+  ) { }
 
   isTypeMatch(tag: BeatTag) {
-    if (!this.type) {
+    if (!this.types.length) {
       return true
     }
 
-    return this.type === tag.type
+    return this.types.includes(tag.type)
   }
 
-  isRangeMatch({ range: [ tagLocation, tagLength ] }: BeatTag) {
-    if (!this.range) {
+  isRangeMatch({ range: [tagLocation, tagLength] }: BeatTag) {
+    if (!this.ranges.length) {
       return true
     }
 
-    const tagEndIndex = tagLocation + tagLength
-    const queryEndIndex = this.range.location + this.range.length
-    return tagLocation >= this.range.location && tagEndIndex <= queryEndIndex
+    let isIncluded = false
+    for (const range of this.ranges) {
+      const tagEndIndex = tagLocation + tagLength
+      const queryEndIndex = range.location + range.length
+      isIncluded ||= (tagLocation >= range.location && tagEndIndex <= queryEndIndex)
+    }
+
+    return isIncluded
   }
 }
 
 export default class BeatTags {
   static get(query: BeatTagQuery): BeatTag[] {
     const tags = Beat.getRawDocumentSetting(DOC_TAGS_KEY) ?? []
-    return tags.filter((tag: BeatTag) => {
-      return query.isTypeMatch(tag) && query.isRangeMatch(tag)
-    })
+    return tags
+      .filter((tag: BeatTag) => query.isTypeMatch(tag) && query.isRangeMatch(tag))
   }
 }

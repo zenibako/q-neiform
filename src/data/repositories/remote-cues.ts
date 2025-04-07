@@ -1,14 +1,16 @@
 import { ICues } from "../../types/i-cues";
 import ILogger from "../../types/i-logger";
 import { IOscClient } from "../../types/i-osc";
+import { IScriptStorage } from "../../types/i-script";
 import Cues from "./cues";
 
 export default class RemoteCues extends Cues {
   constructor(
     private readonly oscClient: IOscClient,
+    public readonly storage: IScriptStorage,
     public readonly logger: ILogger,
   ) {
-    super(logger)
+    super(storage, logger)
   }
 
   async send(cues?: ICues): Promise<void> {

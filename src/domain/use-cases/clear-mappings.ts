@@ -8,7 +8,8 @@ export default class ClearCueMappings implements IUseCase {
   execute() {
     this.logger.log("Clearing cue mappings...")
     try {
-      const lines = this.scripts.getContextFromSelection()
+      const tagLines = this.scripts.getLinesWithTags()
+      const lines = this.scripts.getContext(...tagLines)
       for (const line of lines) {
         line.cueId = undefined
       }

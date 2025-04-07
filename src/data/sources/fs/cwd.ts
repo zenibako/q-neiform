@@ -17,8 +17,12 @@ export default class CurrentWorkingDirectory implements IScriptStorage {
     return this.readFile(this.name, "fountain")
   }
 
-  async getYamlCues(): Promise<string | null> {
-    return this.readFile(this.name, "q.yml") ?? this.readFile(this.name, "q.yaml")
+  async getYamlCues(): Promise<string> {
+    return (await this.readFile(this.name, "q.yml")) ?? (await this.readFile(this.name, "q.yaml")) ?? "cues: {}"
+  }
+
+  async setYamlCues(yaml: string): Promise<void> {
+    this.logger.debug(JSON.stringify({ yaml }, null, 1))
   }
 
   private async readFile(name: string, ext: string): Promise<string | null> {

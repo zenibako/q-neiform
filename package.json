@@ -13,7 +13,7 @@
     "osc-js": "^2.4.1",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.8.0",
-    "uuid": "^11.1.0",
+    "v4-uuid": "^1.1.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {

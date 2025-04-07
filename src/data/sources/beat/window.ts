@@ -77,7 +77,8 @@ export default class BeatWebSocketWindow implements IOscClient, ILogger {
       }
 
       Beat.custom.handleError = ([error, status]: [string, number]) => {
-        // Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
+        const { title, message } = this.getAlertInfo(status, error)
+        Beat.alert(title, message)
         reject({ error, status })
       }
 
@@ -93,7 +94,7 @@ export default class BeatWebSocketWindow implements IOscClient, ILogger {
   }
 
   debug(message: string) {
-    Beat.log(message)
+    Beat.log(`[DEBUG]: ${message}`)
   }
 
   async send(...messages: IOscMessage[]): Promise<IOscMessage[]> {
@@ -119,10 +120,11 @@ export default class BeatWebSocketWindow implements IOscClient, ILogger {
         return `new OSC.Message(${messageArgs.join(",")})`
       })
       Beat.custom.handleError = ([error, status]: [string, number]) => {
-        // Beat.log(`Received error: ${JSON.stringify(error, null, 1)}`)
+        Beat.debug(`Received error: ${JSON.stringify(error, null, 1)}`)
         reject({ error, status })
       }
 
+      this.debug(JSON.stringify({ messagesExpectingReplies, messageStrings, onAddress }, null, 1))
       this.window.runJS(`sendMessage(new OSC.Bundle([${messageStrings.join(",")}]), "${onAddress}")`)
       if (!messagesExpectingReplies.length) {
         resolve([])
@@ -167,7 +169,6 @@ export default class BeatWebSocketWindow implements IOscClient, ILogger {
   private async connectToBridge(password: string): Promise<string> {
     const { reply: { address: replyAddress }, connect } = this.getDictionary()
 
-
     try {
       const [connectResponse] = await this.send({
         address: connect.address,
@@ -206,6 +207,27 @@ export default class BeatWebSocketWindow implements IOscClient, ILogger {
   close() {
     this.window.runJS(`osc.close()`)
     this.window.close()
+  }
+
+  private getAlertInfo(status: number, error?: string) {
+    const tryAgainMessage = "Try again. Is \"q-neiform bridge serve\" running?"
+    switch (status) {
+      case OSC.STATUS.IS_NOT_INITIALIZED:
+        return {
+          title: "Initialization Error",
+          message: tryAgainMessage
+        }
+      case OSC.STATUS.IS_CONNECTING:
+        return {
+          title: "Connection Error",
+          message: tryAgainMessage
+        }
+      default:
+        return {
+          title: error ? "Server Error" : "Unknown Error",
+          message: error ?? "Closing plugin. Reopen and try again."
+        }
+    }
   }
 }
 

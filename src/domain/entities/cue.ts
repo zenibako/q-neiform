@@ -1,4 +1,4 @@
-import { v4 as generateUuid } from "uuid"
+import uuid from 'v4-uuid';
 import { Line } from "../../data/repositories/scripts"
 import { CueType } from "../../data/sources/qlab/workspace"
 import { ICue } from "../../types/i-cues"
@@ -24,7 +24,7 @@ export class Cue implements ICue {
   constructor(
     public name: string,
     public type: CueType,
-    public id: string = generateUuid()
+    public id: string = uuid()
   ) {
   }
 

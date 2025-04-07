@@ -2,9 +2,12 @@ import { ICue, ICues } from "../../types/i-cues";
 import ILogger from "../../types/i-logger";
 import { TriggerCue } from "../../domain/entities/cue";
 import { Line, LineType } from "./scripts";
+import { IScriptStorage } from "../../types/i-script";
+import { parse, stringify } from "yaml";
 
 export default class Cues implements ICues {
   constructor(
+    public readonly storage: IScriptStorage,
     public readonly logger: ILogger,
     private readonly list: ICue[] = []
   ) { }
@@ -87,5 +90,31 @@ export default class Cues implements ICues {
 
     this.list.push(...cuesToAdd)
     return cuesToAdd
+  }
+
+  async load() {
+    const yamlString = await this.storage.getYamlCues()
+    if (!yamlString) {
+      throw new Error("No cue file found.")
+    }
+    this.logger.debug(yamlString)
+
+    const { cues } = parse(yamlString) as ICue
+    if (!cues) {
+      this.storage.setYamlCues("cues: {}")
+      throw new Error("No child cues found on root cue.")
+    }
+    this.list.push(...Object.values(cues))
+  }
+
+  async save() {
+    const cues: Record<string, ICue> = {}
+    for (const cue of this.list) {
+      cues[cue.id] = cue
+    }
+
+    const yamlString = stringify({ cues })
+    this.logger.debug(yamlString)
+    return this.storage.setYamlCues(yamlString)
   }
 }

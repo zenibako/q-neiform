@@ -3,7 +3,10 @@ import { IRange, IScriptEditor, IScriptLine, IScriptData } from "../../types/i-s
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
-  CHARACTER, DIALOGUE, TEXT
+  CHARACTER,
+  DIALOGUE,
+  TEXT,
+  EMPTY,
 }
 
 export class Line {
@@ -19,14 +22,14 @@ export class Line {
   }
 
   getType() {
-    switch (this.typeAsString) {
-      case "Character":
-        return LineType.CHARACTER
-      case "Dialogue":
-        return LineType.DIALOGUE
-      default:
-        return LineType.TEXT
-    }
+    const typesByString = new Map<string, LineType>([
+      ["Character", LineType.CHARACTER],
+      ["Dialogue", LineType.DIALOGUE],
+      ["Text", LineType.TEXT],
+      ["Empty", LineType.EMPTY],
+    ])
+
+    return typesByString.get(this.typeAsString) ?? LineType.TEXT
   }
 
   getStartIndex() {
@@ -52,19 +55,34 @@ export class Scripts {
     this.editor.stopListeningForSelection()
   }
 
-  getContextFromSelection(): Line[] {
+  getLines() {
+    return this.data.getLines().map((line) => new Line(line))
+  }
+
+  getLinesWithTags(): Line[] {
+    const taggedRanges = this.editor.getTaggedRanges("sfx", "vfx")
+    const lines = taggedRanges.map(
+      (range) => new Line(this.data.getLineFromIndex(range.location))
+    )
+    return lines
+  }
+
+  getScopeLines(): Line[] {
     const contextLinesFromApp = this.editor.getSelectedLines()
     if (!contextLinesFromApp?.length) {
       contextLinesFromApp.push(this.editor.getCurrentLine())
     }
 
-    const contextLines = contextLinesFromApp.map(line => new Line(line))
+    return contextLinesFromApp.map((line) => new Line(line))
+  }
 
+  getContext(...scopeLines: Line[]): Line[] {
+    const contextLines = [...scopeLines]
     const [firstLine] = contextLines
     const firstLineType = firstLine?.getType()
 
     let characterLine, dialogueLine
-    // If first selected line is dialogue, get character line before it.
+    // If first line is dialogue, get character line before it.
     if (firstLineType === LineType.DIALOGUE) {
       characterLine = this.getCharacterLineBefore(firstLine!)
       if (characterLine) {
@@ -90,10 +108,15 @@ export class Scripts {
     return this.getLineFromIndex(indexBefore)
   }
 
-  private getCharacterLineBefore(line: Line) {
+  private getCharacterLineBefore(line: Line): Line | null {
     const lineBefore = this.getLineBefore(line)
-    if (lineBefore && line.getType() !== LineType.CHARACTER) {
-      return this.getLineBefore(lineBefore)
+    if (!lineBefore) {
+      return null
+    }
+
+    // Keep recursing until you get a character line.
+    if (lineBefore.getType() !== LineType.CHARACTER) {
+      return this.getCharacterLineBefore(lineBefore)
     }
 
     return lineBefore

@@ -4,8 +4,10 @@ import { Line } from '../../src/data/repositories/scripts'
 import { OSC_DICTIONARY } from '../../src/data/sources/qlab/workspace'
 import ILogger from '../../src/types/i-logger'
 import RemoteCues from '../../src/data/repositories/remote-cues'
+import { IScriptStorage } from '../../src/types/i-script'
 
 const mockOscClient = mock<IOscClient>()
+const mockScriptStorage = mock<IScriptStorage>()
 const mockLogger = mock<ILogger>()
 
 const line1 = "ALICE"
@@ -26,7 +28,7 @@ describe('Push cues with OSC client', () => {
       { string: line2, typeAsString: "Dialogue", range: { location: line1.length, length: line2.length } }
     ].map(line => new Line(line))
 
-    const cues = new RemoteCues(mockOscClient, mockLogger)
+    const cues = new RemoteCues(mockOscClient, mockScriptStorage, mockLogger)
     cues.add(...lines)
     await cues.send()
 
@@ -46,7 +48,7 @@ describe('Push cues with OSC client', () => {
       { string: line4, typeAsString: "Dialogue", range: { location: line3.length, length: line4.length } }
     ].map(line => new Line(line))
 
-    const cues = new RemoteCues(mockOscClient, mockLogger)
+    const cues = new RemoteCues(mockOscClient, mockScriptStorage, mockLogger)
     cues.add(...lines)
     await cues.send()
 

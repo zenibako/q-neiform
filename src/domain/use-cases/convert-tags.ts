@@ -9,8 +9,12 @@ export default class ConvertTagsToCues implements IUseCase {
   async execute() {
     this.logger.debug("Converting tags to cues...")
     try {
-      const lines = this.scripts.getContextFromSelection()
+      await this.cues.load()
+      const tagLines = this.scripts.getLinesWithTags()
+      const lines = this.scripts.getContext(...tagLines)
       this.cues.add(...lines)
+      await this.cues.save()
+      this.logger.debug(JSON.stringify({ lines }, null, 1))
     } catch (e) {
       this.logger.debug(`Error while converting: ${(e as Error).message ?? e}`)
     }
