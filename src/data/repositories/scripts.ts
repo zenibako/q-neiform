@@ -1,5 +1,5 @@
 import ILogger from "../../types/i-logger";
-import { IRange, IScriptEditor, IScriptLine, IScriptData } from "../../types/i-script";
+import { IRange, IScriptEditor, IScriptLine, IScriptData, IScriptTag } from "../../types/i-script";
 import { Script } from "../../domain/entities/script";
 
 export enum LineType {
@@ -14,11 +14,13 @@ export class Line {
   private readonly typeAsString: string
   public readonly range: IRange
   public cueId?: string
-  constructor(scriptAppLine: IScriptLine) {
+  public tags: IScriptTag[]
+  constructor(scriptAppLine: IScriptLine, ...tags: IScriptTag[]) {
     this.text = scriptAppLine.string
     this.typeAsString = scriptAppLine.typeAsString
     this.range = scriptAppLine.range
     this.cueId = scriptAppLine.cueId
+    this.tags = tags
   }
 
   getType() {
@@ -60,11 +62,8 @@ export class Scripts {
   }
 
   getLinesWithTags(): Line[] {
-    const taggedRanges = this.editor.getTaggedRanges("sfx", "vfx")
-    const lines = taggedRanges.map(
-      (range) => new Line(this.data.getLineFromIndex(range.location))
-    )
-    return lines
+    const tags = this.editor.getTags("sfx", "vfx")
+    return tags.map((tag) => new Line(this.data.getLineFromIndex(tag.range.location), tag))
   }
 
   getScopeLines(): Line[] {

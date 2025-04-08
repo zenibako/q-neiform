@@ -1,5 +1,5 @@
 import { IMenuItem, Menu } from "../../../domain/entities/menu"
-import { IRange, IScriptData, IScriptEditor, IScriptLine, IScriptStorage } from "../../../types/i-script"
+import { IRange, IScriptData, IScriptEditor, IScriptLine, IScriptStorage, IScriptTag } from "../../../types/i-script"
 import ILogger from "../../../types/i-logger"
 import { BeatLine, BeatRange, BeatTagType } from "../../../types/beat/beat-types"
 import BeatTags, { BeatTagQuery } from "./tags"
@@ -146,14 +146,13 @@ export default class BeatPlugin implements IScriptEditor, IScriptData, IScriptSt
     return Beat.lines()
   }
 
-  getTaggedRanges(...types: BeatTagType[]): IRange[] {
+  getTags(...types: BeatTagType[]): IScriptTag[] {
     if (!types.length) {
       return []
     }
 
     const query = new BeatTagQuery(types)
     return BeatTags.get(query)
-      .map(({ range: [location, length] }) => ({ location, length }))
   }
 
   pullOutline() {

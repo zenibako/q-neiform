@@ -33,7 +33,7 @@ export interface IScriptEditor {
   getCurrentLine(): IScriptLine
   getSelectedLines(): IScriptLine[]
   setRangeColor(range: IRange, backgroundColor: string, foregroundColor?: string): void
-  getTaggedRanges(...filterTypes: BeatTagType[]): IRange[]
+  getTags(...filterTypes: BeatTagType[]): IScriptTag[]
 }
 
 export interface IScriptStorage {

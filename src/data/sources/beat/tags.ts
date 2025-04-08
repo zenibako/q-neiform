@@ -1,4 +1,5 @@
 import { BeatRange, BeatTag, BeatTagType } from "../../../types/beat/beat-types"
+import { IScriptTag } from "../../../types/i-script"
 
 const DOC_TAGS_KEY = "Tags"
 
@@ -34,7 +35,7 @@ export class BeatTagQuery {
 }
 
 export default class BeatTags {
-  static get(query: BeatTagQuery): BeatTag[] {
+  static get(query: BeatTagQuery): IScriptTag[] {
     const tags = Beat.getRawDocumentSetting(DOC_TAGS_KEY) ?? []
     return tags
       .filter((tag: BeatTag) => query.isTypeMatch(tag) && query.isRangeMatch(tag))
