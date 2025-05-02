@@ -1,9 +1,10 @@
 import { Args, Command, Flags } from '@oclif/core'
 import { QLabWorkspace } from '../../../data/sources/qlab/workspace'
 import OSC from 'osc-js'
+import Config from '../../../data/sources/fs/config'
 // import Cues from '../../../data/repositories/cues'
 
-export default class BridgeServe extends Command {
+export default class AddCues extends Command {
   static override args = {
     file: Args.string({ description: 'file to read' }),
   }
@@ -12,24 +13,24 @@ export default class BridgeServe extends Command {
     '<%= config.bin %> <%= command.id %>',
   ]
   static override flags = {
-    // flag with no value (-f, --force)
-    force: Flags.boolean({ char: 'f' }),
-    // flag with a value (-n, --name=VALUE)
-    name: Flags.string({ char: 'n', description: 'name to print' }),
-    host: Flags.string({ char: 'h', description: 'host address for QLab' }),
-    port: Flags.integer({ char: 'p', description: 'host port for QLab' }),
-    password: Flags.string({ description: 'host password for QLab' }),
+    alias: Flags.string({ description: 'alias for target to use' }),
   }
 
   public async run(): Promise<void> {
-    const { flags: { host = "localhost", port = 53000 } } = await this.parse(BridgeServe)
-    const osc = new OSC({
-      plugin: new OSC.BridgePlugin({
-        udpClient: { port, host },      // Target QLab's port
-        udpServer: { port: port + 1 },  // This bridge's port
-        receiver: "udp"
-      })
-    })
+    const { flags: { alias } } = await this.parse(AddCues)
+
+    const logger = {
+      log: (message: string) => this.log(message),
+      debug: (message: string) => this.log(message)
+    }
+
+    const { host, port } = await new Config(logger).getTarget(alias)
+    if (!host || !port ) {
+        throw new Error()
+    }
+
+    const plugin = new OSC.DatagramPlugin()
+    const osc = new OSC({ plugin })
 
     const qlab = new QLabWorkspace(osc, host, `${port}`, {
       log: (message) => this.log(message),
@@ -39,7 +40,7 @@ export default class BridgeServe extends Command {
     try {
       await qlab.initialize()
       // this.log(response)
-      qlab.listen()
+      qlab.send()
     } catch (e) {
       this.log("Error: " + JSON.stringify(e, null, 1))
       throw e

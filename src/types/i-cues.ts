@@ -1,6 +1,12 @@
 import { Line } from "../data/repositories/scripts"
 import { IOscClient, IOscMessage } from "./i-osc"
 
+export interface ITarget {
+  host?: string,
+  port?: number,
+  password?: string,
+}
+
 export interface ICueApp {
   name: string
   // push(...bundles: ICueCommandBundle[]): Promise<string[]>
